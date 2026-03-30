@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 專業轉換工具 Web 版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #121212; color: #ffffff; }
+        .glass-card { background: rgba(44, 44, 46, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-gradient { background: linear-gradient(135deg, #007AFF 0%, #0056b3 100%); transition: all 0.3s ease; }
+        .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0, 122, 255, 0.3); }
+        .btn-gradient:disabled { background: #333; transform: none; box-shadow: none; cursor: not-allowed; color: #888; }
+        .breathing { animation: breathe 2s infinite ease-in-out; }
+        @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass-card w-full max-w-lg rounded-2xl p-8 shadow-2xl">
+        <h1 class="text-2xl font-bold mb-6 text-center">PDF 轉圖片神器</h1>
+        
+        <form id="uploadForm" class="space-y-6">
+            <div class="relative border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                <div class="text-4xl mb-3">☁️</div>
+                <p id="fileNameDisplay" class="text-gray-400 font-medium">點擊或拖曳 PDF 檔案至此</p>
+                <input type="file" id="fileInput" name="file" accept=".pdf" class="hidden" required onchange="updateFileName()">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">影像畫質</label>
+                    <select name="quality" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
+                        <option value="1.5">1.5x (清晰)</option>
+                        <option value="2.0" selected>2.0x (高畫質)</option>
+                        <option value="3.0">3.0x (超高清)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">輸出格式</label>
+                    <select name="format" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
+                        <option value="jpg" selected>JPG</option>
+                        <option value="png">PNG (支援透明)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-gradient w-full py-4 rounded-xl font-bold text-lg mt-4 flex justify-center items-center gap-2">
+                🚀 開始轉換並下載 Zip
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // 顯示選擇嘅檔案名
+        function updateFileName() {
+            const input = document.getElementById('fileInput');
+            const display = document.getElementById('fileNameDisplay');
+            if (input.files.length > 0) {
+                display.innerHTML = `<span class="text-white">📄 ${input.files[0].name}</span>`;
+            }
+        }
+
+        // 處理表單提交 (Ajax)
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = document.getElementById('submitBtn');
+            const formData = new FormData(form);
+
+            // 進入處理狀態 (微動畫)
+            btn.disabled = true;
+            btn.innerHTML = '⏳ 伺服器處理中...';
+            btn.classList.add('breathing');
+
+            try {
+                const response = await fetch('/api/convert', { method: 'POST', body: formData });
+                
+                if (response.ok) {
+                    // 自動觸發下載 Zip 檔
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    
+                    // 從 header 獲取檔名
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = "converted.zip";
+                    if (contentDisposition) {
+                        filename = contentDisposition.split('filename="')[1].split('"')[0];
+                    }
+                    
+                    a.href = downloadUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    
+                    // 成功狀態
+                    btn.innerHTML = '✅ 轉換成功！(已下載)';
+                } else {
+                    btn.innerHTML = '❌ 轉換失敗，請重試';
+                }
+            } catch (error) {
+                btn.innerHTML = '❌ 連線錯誤';
+            } finally {
+                // 3秒後還原按鈕
+                btn.classList.remove('breathing');
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '🚀 開始轉換並下載 Zip';
+                }, 3000);
+            }
+        };
+    </script>
+</body>
+</html>
