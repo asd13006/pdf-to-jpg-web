@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF 專業轉換工具 Web 版 (本地運算)</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -15,9 +18,7 @@
         .btn-gradient:disabled { background: #334155; transform: none; box-shadow: none; cursor: not-allowed; color: #94a3b8; }
         .breathing { animation: breathe 2s infinite ease-in-out; }
         @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        /* 拖曳高亮特效 */
         .drag-over { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.1) !important; transform: scale(1.02); }
-        /* 平滑過渡 */
         .fade-transition { transition: opacity 0.4s ease, transform 0.4s ease; }
         .hidden-state { opacity: 0; transform: translateY(10px); pointer-events: none; position: absolute; visibility: hidden; }
         .visible-state { opacity: 1; transform: translateY(0); position: relative; visibility: visible; }
@@ -35,7 +36,6 @@
     <input type="file" id="fileInput" accept=".pdf" class="hidden" multiple onchange="handleFilesSelected(event)">
 
     <div class="w-full max-w-5xl relative">
-
         <div id="step1-upload" class="visible-state fade-transition w-full max-w-3xl mx-auto">
             <div id="dropZone" class="glass-panel border-2 border-dashed border-slate-600 rounded-3xl p-16 text-center transition-all duration-300 cursor-pointer hover:border-blue-500 hover:bg-slate-800/50" onclick="document.getElementById('fileInput').click()">
                 <div class="text-6xl mb-6" id="dropIcon">☁️</div>
@@ -45,7 +45,6 @@
         </div>
 
         <div id="step2-workspace" class="hidden-state fade-transition w-full flex flex-col lg:flex-row gap-8">
-            
             <div class="flex-1">
                 <div class="flex justify-between items-end mb-4 px-2">
                     <h2 class="text-xl font-bold text-slate-200">待轉換檔案 (<span id="fileCount">0</span>)</h2>
@@ -53,19 +52,17 @@
                         + 加入更多檔案
                     </button>
                 </div>
-                
-                <div id="fileListContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                <div id="fileListContainer" class="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                     </div>
             </div>
 
             <div class="w-full lg:w-80 shrink-0">
                 <div class="glass-panel rounded-2xl p-6 sticky top-8">
-                    <h3 class="text-lg font-bold text-slate-200 mb-6 border-b border-slate-700 pb-3">轉換設定</h3>
-                    
+                    <h3 class="text-lg font-bold text-slate-200 mb-6 border-b border-slate-700 pb-3">全域轉換設定</h3>
                     <div class="space-y-5 mb-8">
                         <div>
                             <label class="block text-sm font-medium text-slate-400 mb-2">影像畫質</label>
-                            <select id="qualitySelect" class="w-full bg-slate-800 border border-slate-600 rounded-xl p-3 text-white outline-none focus:border-blue-500 transition-colors cursor-pointer">
+                            <select id="qualitySelect" class="w-full bg-slate-800 border border-slate-600 rounded-xl p-3 text-white outline-none focus:border-blue-500 transition-colors">
                                 <option value="1.0">1.0x (標準大小)</option>
                                 <option value="2.0" selected>2.0x (高畫質)</option>
                                 <option value="3.0">3.0x (超高清 4K)</option>
@@ -73,7 +70,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-400 mb-2">輸出格式</label>
-                            <select id="formatSelect" class="w-full bg-slate-800 border border-slate-600 rounded-xl p-3 text-white outline-none focus:border-blue-500 transition-colors cursor-pointer">
+                            <select id="formatSelect" class="w-full bg-slate-800 border border-slate-600 rounded-xl p-3 text-white outline-none focus:border-blue-500 transition-colors">
                                 <option value="image/jpeg" selected>JPG (白色背景)</option>
                                 <option value="image/png">PNG (保留透明底)</option>
                             </select>
@@ -81,9 +78,8 @@
                     </div>
 
                     <button id="convertBtn" onclick="startConversion()" class="btn-gradient w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 shadow-lg">
-                        🚀 開始轉換
+                        🚀 開始批次轉換
                     </button>
-                    
                     <p id="progressText" class="text-center text-sm text-slate-400 mt-4 h-5"></p>
                 </div>
             </div>
@@ -93,7 +89,6 @@
             <div class="text-7xl mb-6">🎉</div>
             <h2 class="text-3xl font-bold text-green-400 mb-4">轉換大功告成！</h2>
             <p class="text-slate-300 mb-10 text-lg">您的壓縮檔已自動開始下載。</p>
-            
             <div class="flex flex-col sm:flex-row justify-center gap-4">
                 <button onclick="forceDownload()" class="bg-slate-700 hover:bg-slate-600 text-white py-3 px-6 rounded-xl font-medium transition-colors">
                     📥 手動下載 Zip
@@ -103,17 +98,15 @@
                 </button>
             </div>
         </div>
-
     </div>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // 全局狀態：儲存用戶選擇嘅檔案
+        // 改為儲存 Object，包含 File 本身同埋分頁設定
         let selectedFiles = [];
-        let finalZipBlob = null; // 儲存轉好嘅 Zip，方便手動下載
+        let finalZipBlob = null;
 
-        // UI 元素
         const step1 = document.getElementById('step1-upload');
         const step2 = document.getElementById('step2-workspace');
         const step3 = document.getElementById('step3-success');
@@ -122,54 +115,34 @@
         const convertBtn = document.getElementById('convertBtn');
         const progressText = document.getElementById('progressText');
 
-        // === 1. 拖曳與選擇邏輯 ===
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            window.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
-        });
-
-        // 處理拖曳放入
-        window.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleNewFiles(files);
-            dropZone.classList.remove('drag-over');
-        });
-
-        // 處理點擊按鈕選擇
-        function handleFilesSelected(event) {
-            handleNewFiles(event.target.files);
-            event.target.value = ""; // 清空 input 確保下次可以揀同一個 file
-        }
+        // 拖曳邏輯
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => window.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false));
+        ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false));
+        ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false));
+        
+        window.addEventListener('drop', (e) => { handleNewFiles(e.dataTransfer.files); dropZone.classList.remove('drag-over'); });
+        function handleFilesSelected(event) { handleNewFiles(event.target.files); event.target.value = ""; }
 
         function handleNewFiles(fileList) {
             const validFiles = Array.from(fileList).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
-            
             if (validFiles.length > 0) {
-                // 將新檔案加入全局陣列
-                selectedFiles = [...selectedFiles, ...validFiles];
+                // 為每個 File 建立一個獨立物件，記錄佢嘅分頁範圍
+                const newFileObjs = validFiles.map(f => ({
+                    id: Date.now() + Math.random(),
+                    file: f,
+                    pageRange: "" // 預設為空 (全部轉換)
+                }));
+                selectedFiles = [...selectedFiles, ...newFileObjs];
                 updateUIState();
             } else if (selectedFiles.length === 0) {
                 alert("請只選擇 PDF 檔案！");
             }
         }
 
-        // === 2. UI 狀態切換與列表渲染 ===
         function updateUIState() {
             if (selectedFiles.length === 0) {
-                // 回到 Step 1
                 switchState(step1);
             } else {
-                // 進入 Step 2
                 document.getElementById('fileCount').innerText = selectedFiles.length;
                 renderFileList();
                 switchState(step2);
@@ -179,88 +152,114 @@
         function switchState(targetElement) {
             [step1, step2, step3].forEach(el => {
                 if (el === targetElement) {
-                    el.classList.remove('hidden-state');
-                    el.classList.add('visible-state');
+                    el.classList.remove('hidden-state'); el.classList.add('visible-state');
                 } else {
-                    el.classList.remove('visible-state');
-                    el.classList.add('hidden-state');
+                    el.classList.remove('visible-state'); el.classList.add('hidden-state');
                 }
             });
         }
 
-        // 渲染獨立檔案卡片
+        // 【功能提升】渲染包含「分頁輸入框」嘅卡片
         function renderFileList() {
             fileListContainer.innerHTML = '';
-            
-            selectedFiles.forEach((file, index) => {
-                const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-                
+            selectedFiles.forEach((item, index) => {
+                const sizeMB = (item.file.size / (1024 * 1024)).toFixed(1);
                 const card = document.createElement('div');
-                card.className = "glass-panel p-4 rounded-xl flex items-center justify-between hover:bg-slate-800/80 transition-colors";
+                card.className = "glass-panel p-5 rounded-xl hover:bg-slate-800/80 transition-colors";
                 card.innerHTML = `
-                    <div class="flex items-center gap-4 overflow-hidden">
-                        <div class="text-3xl bg-slate-700/50 p-2 rounded-lg">📄</div>
-                        <div class="truncate">
-                            <p class="font-bold text-slate-200 truncate">${file.name}</p>
-                            <p class="text-xs text-slate-400 mt-1">${sizeMB} MB</p>
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-4 overflow-hidden">
+                            <div class="text-3xl bg-slate-700/50 p-2 rounded-lg">📄</div>
+                            <div class="truncate">
+                                <p class="font-bold text-slate-200 truncate" title="${item.file.name}">${item.file.name}</p>
+                                <p class="text-xs text-slate-400 mt-1">${sizeMB} MB</p>
+                            </div>
                         </div>
+                        <button onclick="removeFile(${index})" class="text-slate-500 hover:text-red-400 hover:bg-red-400/10 p-2 rounded-lg transition-colors">✕</button>
                     </div>
-                    <button onclick="removeFile(${index})" class="text-slate-500 hover:text-red-400 hover:bg-red-400/10 p-2 rounded-lg transition-colors" title="移除檔案">
-                        ✕
-                    </button>
+                    <div class="bg-slate-800/50 rounded-lg p-3 flex items-center gap-3 border border-slate-700">
+                        <span class="text-sm text-slate-400 whitespace-nowrap">📑 分頁範圍：</span>
+                        <input type="text" placeholder="例: 1-3, 5 (留空代表全轉)" 
+                               value="${item.pageRange}"
+                               onchange="updatePageRange(${index}, this.value)"
+                               class="w-full bg-transparent border-b border-slate-600 focus:border-blue-500 outline-none text-slate-200 text-sm px-2 py-1 placeholder-slate-600 transition-colors">
+                    </div>
                 `;
                 fileListContainer.appendChild(card);
             });
         }
 
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            updateUIState();
-        }
+        function removeFile(index) { selectedFiles.splice(index, 1); updateUIState(); }
+        function updatePageRange(index, val) { selectedFiles[index].pageRange = val; }
 
-        // === 3. 核心轉換邏輯 ===
         function canvasToBlobAsync(canvas, mimeType, qualityParam) {
             return new Promise(resolve => canvas.toBlob(resolve, mimeType, qualityParam));
         }
 
+        // 解析分頁字串
+        function parsePageRange(rangeStr, totalPages) {
+            if (!rangeStr.trim()) return Array.from({length: totalPages}, (_, i) => i + 1);
+            const targetPages = new Set();
+            const parts = rangeStr.split(',');
+            for (let part of parts) {
+                part = part.trim();
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(Number);
+                    if (start > 0 && end <= totalPages && start <= end) {
+                        for (let i = start; i <= end; i++) targetPages.add(i);
+                    }
+                } else {
+                    const pageNum = Number(part);
+                    if (pageNum > 0 && pageNum <= totalPages) targetPages.add(pageNum);
+                }
+            }
+            const result = Array.from(targetPages).sort((a, b) => a - b);
+            return result.length > 0 ? result : Array.from({length: totalPages}, (_, i) => i + 1); // 錯誤則預設全轉
+        }
+
+        // 【效能提升】讓出主執行緒 (Yielding Main Thread)，防卡死 UI
+        const yieldThread = () => new Promise(resolve => setTimeout(resolve, 15));
+
         async function startConversion() {
             if (selectedFiles.length === 0) return;
-
             const scale = parseFloat(document.getElementById('qualitySelect').value);
             const mimeType = document.getElementById('formatSelect').value;
             const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
 
-            // 鎖定 UI 進入轉換狀態
             convertBtn.disabled = true;
             convertBtn.classList.add('breathing');
-            convertBtn.innerHTML = '⏳ 處理中...';
-            // 隱藏所有刪除按鈕防誤觸
-            document.querySelectorAll('#fileListContainer button').forEach(btn => btn.style.display = 'none');
+            document.querySelectorAll('#fileListContainer input, #fileListContainer button').forEach(el => el.disabled = true);
 
             try {
                 const zip = new JSZip();
 
                 for (let f = 0; f < selectedFiles.length; f++) {
-                    const file = selectedFiles[f];
-                    const baseFilename = file.name.replace(/\.[^/.]+$/, "");
+                    const fileObj = selectedFiles[f];
+                    const baseFilename = fileObj.file.name.replace(/\.[^/.]+$/, "");
                     
-                    progressText.innerText = `讀取檔案: ${file.name.substring(0, 15)}...`;
+                    progressText.innerText = `正在讀取: ${baseFilename.substring(0, 15)}...`;
+                    await yieldThread(); // 讓 UI 刷新
                     
                     const arrayBuffer = await new Promise((resolve, reject) => {
                         const fr = new FileReader();
                         fr.onload = () => resolve(fr.result);
                         fr.onerror = reject;
-                        fr.readAsArrayBuffer(file);
+                        fr.readAsArrayBuffer(fileObj.file);
                     });
 
                     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                     const totalPages = pdf.numPages;
                     
+                    // 解析該檔案專屬嘅分頁設定
+                    const targetPages = parsePageRange(fileObj.pageRange, totalPages);
                     let folder = selectedFiles.length > 1 ? zip.folder(baseFilename) : zip;
 
-                    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    for (let i = 0; i < targetPages.length; i++) {
+                        const pageNum = targetPages[i];
+                        
                         convertBtn.innerHTML = `⟳ 檔案 ${f+1}/${selectedFiles.length}`;
-                        progressText.innerText = `正在渲染: 第 ${pageNum} / ${totalPages} 頁`;
+                        progressText.innerText = `正在轉換: 第 ${pageNum} 頁 (共 ${targetPages.length} 頁)`;
+                        await yieldThread(); // 【核心魔法】每次渲染前休息 15ms，確保呼吸燈動畫同文字唔會 Lag 停！
                         
                         const page = await pdf.getPage(pageNum);
                         const viewport = page.getViewport({ scale: scale });
@@ -281,54 +280,59 @@
                         const blob = await canvasToBlobAsync(canvas, mimeType, qualityParam);
                         
                         folder.file(`${baseFilename}_page_${pageNum}.${ext}`, blob);
+                        
+                        // 清理記憶體
+                        canvas.width = 0; canvas.height = 0;
                     }
                 }
 
                 convertBtn.innerHTML = '📦 打包 Zip 中...';
                 progressText.innerText = "正在壓縮圖片，請稍候...";
+                await yieldThread();
                 
                 finalZipBlob = await zip.generateAsync({ type: "blob" });
                 triggerDownload();
 
-                // 進入 Step 3: 成功慶祝頁面
-                setTimeout(() => {
-                    switchState(step3);
-                }, 500);
+                setTimeout(() => { switchState(step3); }, 500);
 
             } catch (error) {
                 console.error(error);
-                convertBtn.innerHTML = '❌ 轉換失敗';
-                progressText.innerText = "發生錯誤，請檢查檔案是否損壞。";
+                convertBtn.innerHTML = '❌ 轉換發生錯誤';
+                progressText.innerText = "請檢查檔案是否加密或損壞。";
                 setTimeout(() => { resetApp(); }, 3000);
             }
         }
 
-        // === 4. 下載與重置 ===
         function triggerDownload() {
             if (!finalZipBlob) return;
             const downloadUrl = URL.createObjectURL(finalZipBlob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            a.download = selectedFiles.length === 1 ? `${selectedFiles[0].name.replace(/\.[^/.]+$/, "")}_converted.zip` : `Batch_Converted_${selectedFiles.length}_Files.zip`;
+            a.download = selectedFiles.length === 1 ? `${selectedFiles[0].file.name.replace(/\.[^/.]+$/, "")}_converted.zip` : `Batch_Converted.zip`;
             document.body.appendChild(a);
             a.click();
             a.remove();
-            // 延遲釋放 URL，防止部分瀏覽器下載失敗
             setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
         }
 
-        function forceDownload() {
-            triggerDownload();
-        }
+        function forceDownload() { triggerDownload(); }
 
         function resetApp() {
             selectedFiles = [];
             finalZipBlob = null;
             convertBtn.disabled = false;
             convertBtn.classList.remove('breathing');
-            convertBtn.innerHTML = '🚀 開始轉換';
+            convertBtn.innerHTML = '🚀 開始批次轉換';
             progressText.innerText = "";
+            document.querySelectorAll('#fileListContainer input, #fileListContainer button').forEach(el => el.disabled = false);
             updateUIState();
+        }
+        
+        // 【留存率】註冊 Service Worker (PWA 用)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
         }
     </script>
 </body>
