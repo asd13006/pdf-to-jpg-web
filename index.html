@@ -22,17 +22,19 @@
     <style>
         body { transition: background-color 0.3s, color 0.3s; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         .glass-panel { transition: all 0.3s ease; }
+        
+        /* 預設藍色漸變按鈕 */
         .btn-primary { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); transition: all 0.3s ease; color: white; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3); }
         .btn-primary:disabled { background: #475569; transform: none; box-shadow: none; cursor: not-allowed; opacity: 0.7; }
+        
+        /* 成功綠色按鈕 */
+        .btn-success { background: #16a34a; transition: all 0.3s ease; color: white; box-shadow: 0 10px 20px rgba(22, 163, 74, 0.2); }
         
         .breathing { animation: breathe 2s infinite ease-in-out; }
         @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         
         .drag-over { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.05) !important; transform: scale(1.02); }
-        
-        .hidden-state { opacity: 0; transform: translateY(10px); pointer-events: none; position: absolute; visibility: hidden; }
-        .visible-state { opacity: 1; transform: translateY(0); position: relative; visibility: visible; transition: opacity 0.4s ease, transform 0.4s ease; }
         
         dialog::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -68,7 +70,7 @@
         </div>
     </header>
 
-    <main class="flex-grow w-full max-w-6xl mx-auto px-4 py-12 flex flex-col items-center">
+    <main class="flex-grow w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center">
         
         <div class="mb-10 text-center max-w-2xl">
             <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4" data-i18n="heroTitle">極速 PDF 轉換工具</h1>
@@ -77,78 +79,60 @@
 
         <input type="file" id="fileInput" accept=".pdf" class="hidden" multiple onchange="handleFilesSelected(event)">
 
-        <div class="w-full relative min-h-[400px]">
-            <div id="step1-upload" class="visible-state w-full max-w-3xl mx-auto">
-                <div id="dropZone" class="glass-panel bg-white dark:bg-darkcard border-2 border-dashed border-gray-300 dark:border-darkborder rounded-3xl p-10 sm:p-16 text-center transition-all duration-300 shadow-sm cursor-pointer relative" onclick="document.getElementById('fileInput').click()">
-                    <div class="pointer-events-none">
-                        <div class="text-6xl mb-6" id="dropIcon">☁️</div>
-                        <h3 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white" data-i18n="dropTitle">點擊或拖曳 PDF 檔案至此</h3>
-                        <p class="text-gray-500 dark:text-gray-400 mb-8" data-i18n="dropDesc">支援批次處理，自動分類資料夾</p>
-                    </div>
-                    
-                    <div class="relative z-20 flex flex-wrap items-center justify-center gap-4 border-t border-gray-200 dark:border-darkborder pt-6 mt-2" onclick="event.stopPropagation()">
-                        <span class="text-sm text-gray-400" data-i18n="orImport">或從雲端匯入：</span>
-                        <button onclick="openCloudModal('Google Drive')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-darkcard">
-                            <img src="https://img.icons8.com/color/48/google-drive--v1.png" class="w-5 h-5" alt="Drive"> Drive
-                        </button>
-                        <button onclick="openCloudModal('Dropbox')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-darkcard">
-                            <img src="https://img.icons8.com/color/48/dropbox.png" class="w-5 h-5" alt="Dropbox"> Dropbox
-                        </button>
-                    </div>
+        <div class="w-full relative">
+            
+            <div id="dropZone" class="glass-panel bg-white dark:bg-darkcard border-2 border-dashed border-gray-300 dark:border-darkborder rounded-3xl p-8 sm:p-12 text-center transition-all duration-300 shadow-sm cursor-pointer relative mb-8" onclick="document.getElementById('fileInput').click()">
+                <div class="pointer-events-none">
+                    <div class="text-5xl mb-4" id="dropIcon">☁️</div>
+                    <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white" data-i18n="dropTitle">點擊或拖曳 PDF 檔案至此</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6 text-sm" data-i18n="dropDesc">支援批次處理，自動分類資料夾</p>
+                </div>
+                
+                <div class="relative z-20 flex flex-wrap items-center justify-center gap-4 border-t border-gray-200 dark:border-darkborder pt-6 mt-2" onclick="event.stopPropagation()">
+                    <span class="text-sm text-gray-400" data-i18n="orImport">或從雲端匯入：</span>
+                    <button onclick="openCloudModal('Google Drive')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-darkcard">
+                        <img src="https://img.icons8.com/color/48/google-drive--v1.png" class="w-5 h-5" alt="Drive"> Drive
+                    </button>
+                    <button onclick="openCloudModal('Dropbox')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-darkcard">
+                        <img src="https://img.icons8.com/color/48/dropbox.png" class="w-5 h-5" alt="Dropbox"> Dropbox
+                    </button>
                 </div>
             </div>
 
-            <div id="step2-workspace" class="hidden-state w-full flex flex-col lg:flex-row gap-8">
-                <div class="flex-1">
-                    <div class="flex justify-between items-end mb-4 px-2">
-                        <h2 class="text-xl font-bold"><span data-i18n="pendingFiles">待轉換檔案</span> (<span id="fileCount">0</span>)</h2>
-                        <button onclick="document.getElementById('fileInput').click()" class="text-sm text-blue-600 dark:text-blue-400 font-medium" data-i18n="addMore">+ 加入更多</button>
+            <div id="workspaceContainer" class="hidden opacity-0 transition-opacity duration-500 ease-in-out w-full glass-panel bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-3xl p-6 sm:p-8 shadow-lg">
+                
+                <div class="mb-8">
+                    <div class="flex justify-between items-end mb-4 px-1">
+                        <h2 class="text-lg font-bold"><span data-i18n="pendingFiles">待轉換檔案</span> (<span id="fileCount">0</span>)</h2>
                     </div>
-                    <div id="fileListContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar"></div>
+                    <div id="fileListContainer" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"></div>
                 </div>
 
-                <div class="w-full lg:w-80 shrink-0">
-                    <div class="glass-panel bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-2xl p-6 sticky top-24 shadow-sm">
-                        <h3 class="text-lg font-bold mb-6 border-b border-gray-200 dark:border-darkborder pb-3" data-i18n="settings">轉換設定</h3>
-                        
-                        <div class="space-y-5 mb-8">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="quality">影像畫質</label>
-                                <select id="qualitySelect" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
-                                    <option value="1.0" data-i18n="qStandard">1.0x (標準大小)</option>
-                                    <option value="2.0" selected data-i18n="qHigh">2.0x (高畫質)</option>
-                                    <option value="3.0" data-i18n="qUltra">3.0x (超高清 4K)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="format">輸出格式</label>
-                                <select id="formatSelect" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
-                                    <option value="image/jpeg" selected>JPG (白色背景)</option>
-                                    <option value="image/png">PNG (保留透明底)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button id="convertBtn" onclick="startConversion()" class="btn-primary w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2">
-                            <span id="convertBtnText" data-i18n="btnStart">🚀 開始批次轉換</span>
-                        </button>
-                        <p id="progressText" class="text-center text-sm text-gray-500 mt-4 h-5"></p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="quality">影像畫質</label>
+                        <select id="qualitySelect" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                            <option value="1.0" data-i18n="qStandard">1.0x (標準大小)</option>
+                            <option value="2.0" selected data-i18n="qHigh">2.0x (高畫質)</option>
+                            <option value="3.0" data-i18n="qUltra">3.0x (超高清 4K)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="format">輸出格式</label>
+                        <select id="formatSelect" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                            <option value="image/jpeg" selected>JPG (白色背景)</option>
+                            <option value="image/png">PNG (保留透明底)</option>
+                        </select>
                     </div>
                 </div>
-            </div>
 
-            <div id="step3-success" class="hidden-state w-full max-w-2xl mx-auto text-center glass-panel bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder shadow-lg rounded-3xl p-16">
-                <div class="text-7xl mb-6">🎉</div>
-                <h2 class="text-3xl font-bold text-green-600 dark:text-green-500 mb-4" data-i18n="successTitle">轉換大功告成！</h2>
-                <p class="text-gray-500 dark:text-gray-400 mb-10 text-lg" data-i18n="successDesc">您的壓縮檔已自動開始下載。</p>
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <button onclick="forceDownload()" class="bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-white py-3 px-6 rounded-xl font-medium transition" data-i18n="btnManualDl">
-                        📥 手動下載 Zip
+                <div>
+                    <button id="convertBtn" onclick="startConversion()" class="btn-primary w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2">
+                        <span id="convertBtnText" data-i18n="btnStart">🚀 開始轉換</span>
                     </button>
-                    <button onclick="resetApp()" class="btn-primary py-3 px-6 rounded-xl font-medium" data-i18n="btnReset">
-                        🔄 轉換新檔案
-                    </button>
+                    <p id="progressText" class="text-center text-sm text-gray-500 mt-4 h-5"></p>
                 </div>
+
             </div>
         </div>
     </main>
@@ -170,7 +154,7 @@
                 <div class="p-6 rounded-2xl bg-gray-50 dark:bg-darkcard">
                     <div class="text-4xl mb-4">⚡</div>
                     <h3 class="text-xl font-bold mb-2" data-i18n="feat3Title">智能批次引擎</h3>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="feat3Desc">拖曳多份文件，獨立設定分頁範圍。系統會自動為您分類資料夾並打包成一個整潔的 ZIP 檔。</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="feat3Desc">拖曳多份文件，一鍵全部轉換。系統會自動為您分類資料夾並打包成一個整潔的 ZIP 檔。</p>
                 </div>
             </div>
         </div>
@@ -189,7 +173,7 @@
             </div>
             <div class="text-center text-xs text-gray-400 dark:text-gray-600">
                 <p>&copy; 2026 YouTube Title Studio. All rights reserved.</p>
-                <p class="mt-2 text-gray-400 dark:text-gray-500 font-medium">Develop by Leo Lai v1.1.1</p>
+                <p class="mt-2 text-gray-400 dark:text-gray-500 font-medium">Develop by Leo Lai v1.2.0</p>
             </div>
         </div>
     </footer>
@@ -208,16 +192,13 @@
     </dialog>
 
     <script>
-        // 確保 PDF.js Worker 正確載入
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // ================= 1. 變數與 DOM 元素快取 (唯一宣告) =================
+        // ================= 1. 變數與 DOM 元素快取 =================
         let selectedFiles = [];
         let finalZipBlob = null;
 
-        const step1 = document.getElementById('step1-upload');
-        const step2 = document.getElementById('step2-workspace');
-        const step3 = document.getElementById('step3-success');
+        const workspaceContainer = document.getElementById('workspaceContainer');
         const dropZone = document.getElementById('dropZone');
         const fileListContainer = document.getElementById('fileListContainer');
         const convertBtn = document.getElementById('convertBtn');
@@ -250,32 +231,28 @@
                 pageTitle: "YouTube Title Studio - PDF 專業轉換工具", logoText: "PDF2IMG Pro", installApp: "下載到電腦",
                 heroTitle: "極速 PDF 轉換工具", heroSub: "100% 本地瀏覽器運算。保障機密安全，無需上傳至任何伺服器。",
                 dropTitle: "點擊或拖曳 PDF 檔案至此", dropDesc: "支援批次處理，自動分類資料夾", orImport: "或從雲端匯入：",
-                pendingFiles: "待轉換檔案", addMore: "+ 加入更多", settings: "轉換設定",
+                pendingFiles: "待轉換檔案", settings: "轉換設定",
                 quality: "影像畫質", qStandard: "1.0x (標準大小)", qHigh: "2.0x (高畫質)", qUltra: "3.0x (超高清 4K)",
-                format: "輸出格式", btnStart: "🚀 開始批次轉換", successTitle: "轉換大功告成！", successDesc: "您的壓縮檔已自動開始下載。",
-                btnManualDl: "📥 手動下載 Zip", btnReset: "🔄 轉換新檔案",
+                format: "輸出格式", btnStart: "🚀 開始轉換", successBtn: "✅ 轉換完成！(已下載)",
                 whyChoose: "為何選擇我們的工具？", feat1Title: "軍規級私隱保護", feat1Desc: "檔案 100% 於您的設備上處理，絕不觸碰雲端伺服器，完美符合商業機密及 NDA 要求。",
                 feat2Title: "支援超高解析度", feat2Desc: "高達 3.0x 的無損渲染技術，無論是細緻的 CAD 建築圖則還是高清海報，細節依然銳利清晰。",
-                feat3Title: "智能批次引擎", feat3Desc: "拖曳多份文件，獨立設定分頁範圍。系統會自動為您分類資料夾並打包成一個整潔的 ZIP 檔。",
+                feat3Title: "智能批次引擎", feat3Desc: "拖曳多份文件，一鍵全部轉換。系統會自動為您分類資料夾並打包成一個整潔的 ZIP 檔。",
                 footAbout: "關於我們", footFAQ: "常見問題", footHelp: "幫助中心", footContact: "聯絡我們", footTerms: "使用條款", footPrivacy: "私隱政策", footSettings: "私隱設定",
-                placeholderPage: "例: 1-3, 5 (留空代表全轉)", lblPageRange: "📑 分頁範圍：", btnClose: "關閉",
-                sysRead: "正在讀取：", sysConvert: "正在轉換：", sysZip: "📦 打包 Zip 中...", sysZipWait: "正在壓縮圖片，請稍候...", sysErr: "發生錯誤，請檢查檔案。",
+                btnClose: "關閉", sysRead: "正在讀取：", sysConvert: "正在轉換：", sysZip: "📦 打包 Zip 中...", sysZipWait: "正在壓縮圖片，請稍候...", sysErr: "發生錯誤，請檢查檔案。",
                 cloudTitle: "雲端連接 (沙盒模式)", cloudDesc: "您目前正在嘗試連接 {provider}。<br><br>為保障最高級別的帳戶安全，系統管理員 (Leo Lai) 尚未正式啟用此 API 端點。請暫時使用本地上傳功能。"
             },
             en: {
                 pageTitle: "YouTube Title Studio - PDF Converter", logoText: "PDF2IMG Pro", installApp: "Install App",
                 heroTitle: "Lightning Fast PDF Converter", heroSub: "100% Local processing. Bank-grade security with no server uploads.",
                 dropTitle: "Click or Drag PDFs Here", dropDesc: "Supports batch processing & auto-folder sorting", orImport: "Or import from:",
-                pendingFiles: "Pending Files", addMore: "+ Add More", settings: "Conversion Settings",
+                pendingFiles: "Pending Files", settings: "Conversion Settings",
                 quality: "Image Quality", qStandard: "1.0x (Standard)", qHigh: "2.0x (High Quality)", qUltra: "3.0x (Ultra HD 4K)",
-                format: "Output Format", btnStart: "🚀 Start Batch Conversion", successTitle: "Conversion Complete!", successDesc: "Your ZIP file is downloading automatically.",
-                btnManualDl: "📥 Manual Download", btnReset: "🔄 Convert New Files",
+                format: "Output Format", btnStart: "🚀 Start Conversion", successBtn: "✅ Conversion Complete! (Downloaded)",
                 whyChoose: "Why Choose Us?", feat1Title: "Military-Grade Privacy", feat1Desc: "Files are processed 100% locally on your device. Zero server uploads, fully compliant with NDA requirements.",
                 feat2Title: "Ultra High Resolution", feat2Desc: "Lossless rendering up to 3.0x. Perfect for detailed CAD drawings and HD posters.",
-                feat3Title: "Smart Batch Engine", feat3Desc: "Drag multiple files, set page ranges independently. Our engine auto-sorts folders and zips them neatly.",
+                feat3Title: "Smart Batch Engine", feat3Desc: "Drag multiple files, convert all in one click. Our engine auto-sorts folders and zips them neatly.",
                 footAbout: "About Us", footFAQ: "FAQ", footHelp: "Help", footContact: "Contact", footTerms: "Terms of Use", footPrivacy: "Privacy Policy", footSettings: "Privacy Settings",
-                placeholderPage: "e.g., 1-3, 5 (Blank for all)", lblPageRange: "📑 Page Range:", btnClose: "Close",
-                sysRead: "Reading: ", sysConvert: "Converting: ", sysZip: "📦 Zipping...", sysZipWait: "Compressing, please wait...", sysErr: "An error occurred. Check your file.",
+                btnClose: "Close", sysRead: "Reading: ", sysConvert: "Converting: ", sysZip: "📦 Zipping...", sysZipWait: "Compressing, please wait...", sysErr: "An error occurred. Check your file.",
                 cloudTitle: "Cloud Connection (Sandbox)", cloudDesc: "You are attempting to connect to {provider}.<br><br>For maximum account security, the system admin (Leo Lai) has not yet activated this API endpoint. Please use local upload for now."
             }
         };
@@ -319,7 +296,6 @@
         };
 
         // ================= 4. 拖曳與選擇邏輯 =================
-        // 防止瀏覽器預設行為 (避免將 PDF 直接喺瀏覽器打開)
         window.addEventListener('dragover', e => e.preventDefault(), false);
         window.addEventListener('drop', e => e.preventDefault(), false);
 
@@ -340,7 +316,8 @@
         function handleNewFiles(fileList) {
             const validFiles = Array.from(fileList).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
             if (validFiles.length > 0) {
-                const newFileObjs = validFiles.map(f => ({ id: Date.now()+Math.random(), file: f, pageRange: "" }));
+                // 移除 pageRange，只需儲存 file
+                const newFileObjs = validFiles.map(f => ({ id: Date.now()+Math.random(), file: f }));
                 selectedFiles = [...selectedFiles, ...newFileObjs];
                 updateUIState();
             } else {
@@ -348,21 +325,17 @@
             }
         }
 
+        // 佈局邏輯：條件顯示下方工作區
         function updateUIState() {
             if (selectedFiles.length === 0) {
-                switchState(step1);
+                workspaceContainer.classList.add('hidden', 'opacity-0');
             } else {
                 document.getElementById('fileCount').innerText = selectedFiles.length;
                 renderFileList();
-                switchState(step2);
+                workspaceContainer.classList.remove('hidden');
+                // 延遲一幀加上 opacity，觸發 fade-in 動畫
+                setTimeout(() => workspaceContainer.classList.remove('opacity-0'), 10);
             }
-        }
-
-        function switchState(targetEl) {
-            [step1, step2, step3].forEach(el => {
-                if (el === targetEl) { el.classList.remove('hidden-state'); el.classList.add('visible-state'); } 
-                else { el.classList.remove('visible-state'); el.classList.add('hidden-state'); }
-            });
         }
 
         function renderFileList() {
@@ -370,49 +343,25 @@
             selectedFiles.forEach((item, index) => {
                 const sizeMB = (item.file.size / (1024 * 1024)).toFixed(1);
                 const card = document.createElement('div');
-                card.className = "glass-panel bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder p-4 rounded-xl shadow-sm";
+                card.className = "glass-panel bg-gray-50 dark:bg-darkborder border border-gray-200 dark:border-gray-700 p-3 rounded-xl shadow-sm flex items-center justify-between";
                 card.innerHTML = `
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-4 overflow-hidden">
-                            <div class="text-3xl bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">📄</div>
-                            <div class="truncate">
-                                <p class="font-bold truncate text-sm" title="${item.file.name}">${item.file.name}</p>
-                                <p class="text-xs text-gray-500">${sizeMB} MB</p>
-                            </div>
+                    <div class="flex items-center gap-4 overflow-hidden">
+                        <div class="text-2xl bg-gray-200 dark:bg-gray-800 p-2 rounded-lg leading-none">📄</div>
+                        <div class="truncate">
+                            <p class="font-bold truncate text-sm" title="${item.file.name}">${item.file.name}</p>
+                            <p class="text-xs text-gray-500">${sizeMB} MB</p>
                         </div>
-                        <button onclick="removeFile(${index})" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition" title="Remove">✕</button>
                     </div>
-                    <div class="bg-gray-50 dark:bg-[#0f0f0f] rounded-lg p-2 flex items-center gap-2 border border-gray-200 dark:border-gray-800">
-                        <span class="text-xs text-gray-500 whitespace-nowrap">${translations[currentLang].lblPageRange}</span>
-                        <input type="text" placeholder="${translations[currentLang].placeholderPage}" value="${item.pageRange}" onchange="updatePageRange(${index}, this.value)" class="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-sm px-1 py-1 transition-colors dark:text-gray-200">
-                    </div>
+                    <button onclick="removeFile(${index})" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition" title="Remove">✕</button>
                 `;
                 fileListContainer.appendChild(card);
             });
         }
 
         window.removeFile = function(index) { selectedFiles.splice(index, 1); updateUIState(); };
-        window.updatePageRange = function(index, val) { selectedFiles[index].pageRange = val; };
         
-        // ================= 5. PDF 轉換引擎 =================
+        // ================= 5. PDF 轉換引擎 (全量轉換，無分頁邏輯) =================
         const yieldThread = () => new Promise(resolve => setTimeout(resolve, 15));
-        
-        function parsePageRange(rangeStr, totalPages) {
-            if (!rangeStr.trim()) return Array.from({length: totalPages}, (_, i) => i + 1);
-            const targetPages = new Set();
-            rangeStr.split(',').forEach(part => {
-                part = part.trim();
-                if (part.includes('-')) {
-                    const [start, end] = part.split('-').map(Number);
-                    if (start > 0 && end <= totalPages && start <= end) for (let i = start; i <= end; i++) targetPages.add(i);
-                } else {
-                    const pageNum = Number(part);
-                    if (pageNum > 0 && pageNum <= totalPages) targetPages.add(pageNum);
-                }
-            });
-            const result = Array.from(targetPages).sort((a, b) => a - b);
-            return result.length > 0 ? result : Array.from({length: totalPages}, (_, i) => i + 1);
-        }
 
         window.startConversion = async function() {
             if (selectedFiles.length === 0) return;
@@ -422,7 +371,7 @@
 
             convertBtn.disabled = true;
             convertBtn.classList.add('breathing');
-            document.querySelectorAll('#fileListContainer input, #fileListContainer button').forEach(el => el.disabled = true);
+            document.querySelectorAll('#fileListContainer button').forEach(el => el.disabled = true);
 
             try {
                 const zip = new JSZip();
@@ -441,13 +390,14 @@
                     });
 
                     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                    const targetPages = parsePageRange(fileObj.pageRange, pdf.numPages);
+                    const totalPages = pdf.numPages;
+                    
                     let folder = selectedFiles.length > 1 ? zip.folder(baseFilename) : zip;
 
-                    for (let i = 0; i < targetPages.length; i++) {
-                        const pageNum = targetPages[i];
+                    // 直接迴圈 1 至總頁數 (移除 parsePageRange)
+                    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
                         convertBtnText.innerText = `⟳ ${currentLang==='zh'?'檔案':'File'} ${f+1}/${selectedFiles.length}`;
-                        progressText.innerText = `${translations[currentLang].sysConvert} ${currentLang==='zh'?'第 ':''}${pageNum}${currentLang==='zh'?' 頁':''}`;
+                        progressText.innerText = `${translations[currentLang].sysConvert} ${currentLang==='zh'?'第 ':''}${pageNum}/${totalPages}${currentLang==='zh'?' 頁':''}`;
                         await yieldThread();
                         
                         const page = await pdf.getPage(pageNum);
@@ -471,7 +421,15 @@
                 
                 finalZipBlob = await zip.generateAsync({ type: "blob" });
                 triggerDownload();
-                setTimeout(() => { switchState(step3); }, 500);
+                
+                // 【狀態化大按鈕】成功狀態 UI
+                convertBtn.classList.remove('btn-primary', 'breathing');
+                convertBtn.classList.add('btn-success');
+                convertBtnText.innerText = translations[currentLang].successBtn;
+                progressText.innerText = "";
+                
+                // 3.5秒後自動清空還原
+                setTimeout(() => { resetApp(); }, 3500);
 
             } catch (error) {
                 console.error(error);
@@ -491,14 +449,14 @@
             setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
         };
 
-        window.forceDownload = function() { triggerDownload(); };
-
         window.resetApp = function() {
             selectedFiles = []; finalZipBlob = null;
-            convertBtn.disabled = false; convertBtn.classList.remove('breathing');
+            convertBtn.disabled = false; 
+            convertBtn.classList.remove('btn-success', 'breathing');
+            convertBtn.classList.add('btn-primary');
             convertBtnText.innerText = translations[currentLang].btnStart;
             progressText.innerText = "";
-            updateUIState();
+            updateUIState(); // 會自動隱藏工作區
         };
         
         // ================= 6. PWA 安裝邏輯 =================
