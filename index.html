@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF 專業轉換工具 Web 版</title>
+    <title>PDF 專業轉換工具 Web 版 (純前端運算)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body { background-color: #121212; color: #ffffff; }
         .glass-card { background: rgba(44, 44, 46, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-gradient { background: linear-gradient(135deg, #007AFF 0%, #0056b3 100%); transition: all 0.3s ease; }
-        .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0, 122, 255, 0.3); }
+        .btn-gradient { background: linear-gradient(135deg, #0A84FF 0%, #0056b3 100%); transition: all 0.3s ease; }
+        .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(10, 132, 255, 0.3); }
         .btn-gradient:disabled { background: #333; transform: none; box-shadow: none; cursor: not-allowed; color: #888; }
         .breathing { animation: breathe 2s infinite ease-in-out; }
         @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
@@ -18,29 +20,29 @@
 <body class="min-h-screen flex items-center justify-center p-4">
 
     <div class="glass-card w-full max-w-lg rounded-2xl p-8 shadow-2xl">
-        <h1 class="text-2xl font-bold mb-6 text-center">PDF 轉圖片神器</h1>
+        <h1 class="text-2xl font-bold mb-6 text-center">PDF 轉圖片神器 <span class="text-xs bg-blue-600 px-2 py-1 rounded text-white ml-2">本地運算版</span></h1>
         
         <form id="uploadForm" class="space-y-6">
             <div class="relative border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" onclick="document.getElementById('fileInput').click()">
                 <div class="text-4xl mb-3">☁️</div>
                 <p id="fileNameDisplay" class="text-gray-400 font-medium">點擊或拖曳 PDF 檔案至此</p>
-                <input type="file" id="fileInput" name="file" accept=".pdf" class="hidden" required onchange="updateFileName()">
+                <input type="file" id="fileInput" accept=".pdf" class="hidden" required onchange="updateFileName()">
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm text-gray-400 mb-2">影像畫質</label>
-                    <select name="quality" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
-                        <option value="1.5">1.5x (清晰)</option>
+                    <select id="qualitySelect" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
+                        <option value="1.0">1.0x (標準)</option>
                         <option value="2.0" selected>2.0x (高畫質)</option>
                         <option value="3.0">3.0x (超高清)</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-2">輸出格式</label>
-                    <select name="format" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
-                        <option value="jpg" selected>JPG</option>
-                        <option value="png">PNG (支援透明)</option>
+                    <select id="formatSelect" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
+                        <option value="image/jpeg" selected>JPG</option>
+                        <option value="image/png">PNG (支援透明)</option>
                     </select>
                 </div>
             </div>
@@ -52,6 +54,9 @@
     </div>
 
     <script>
+        // 設定 PDF.js worker 路徑
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         // 顯示選擇嘅檔案名
         function updateFileName() {
             const input = document.getElementById('fileInput');
@@ -61,49 +66,100 @@
             }
         }
 
-        // 處理表單提交 (Ajax)
+        // 將 Canvas 轉換為 Blob (圖片檔案)
+        function canvasToBlobAsync(canvas, mimeType, qualityParam) {
+            return new Promise(resolve => {
+                canvas.toBlob(resolve, mimeType, qualityParam);
+            });
+        }
+
+        // 處理表單提交
         document.getElementById('uploadForm').onsubmit = async (e) => {
             e.preventDefault();
-            const form = e.target;
-            const btn = document.getElementById('submitBtn');
-            const formData = new FormData(form);
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) return;
 
-            // 進入處理狀態 (微動畫)
+            const scale = parseFloat(document.getElementById('qualitySelect').value);
+            const mimeType = document.getElementById('formatSelect').value;
+            const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+            const baseFilename = file.name.replace(/\.[^/.]+$/, "");
+
+            const btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            btn.innerHTML = '⏳ 伺服器處理中...';
             btn.classList.add('breathing');
 
             try {
-                const response = await fetch('/api/convert', { method: 'POST', body: formData });
+                // 1. 讀取 PDF
+                btn.innerHTML = '⏳ 讀取 PDF 中...';
+                const fileReader = new FileReader();
                 
-                if (response.ok) {
-                    // 自動觸發下載 Zip 檔
-                    const blob = await response.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
+                const arrayBuffer = await new Promise((resolve, reject) => {
+                    fileReader.onload = () => resolve(fileReader.result);
+                    fileReader.onerror = reject;
+                    fileReader.readAsArrayBuffer(file);
+                });
+
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const totalPages = pdf.numPages;
+                
+                // 2. 準備打包 Zip
+                const zip = new JSZip();
+
+                // 3. 逐頁渲染 (使用 Canvas)
+                for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    btn.innerHTML = `⟳ 轉換中... (第 ${pageNum}/${totalPages} 頁)`;
                     
-                    // 從 header 獲取檔名
-                    const contentDisposition = response.headers.get('Content-Disposition');
-                    let filename = "converted.zip";
-                    if (contentDisposition) {
-                        filename = contentDisposition.split('filename="')[1].split('"')[0];
+                    const page = await pdf.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: scale });
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    // 如果係 JPG，要填滿白色背景 (因為 PDF 預設係透明底)
+                    if (mimeType === 'image/jpeg') {
+                        ctx.fillStyle = "#FFFFFF";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
                     }
+
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport
+                    };
                     
-                    a.href = downloadUrl;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
+                    // 等待頁面渲染完成
+                    await page.render(renderContext).promise;
                     
-                    // 成功狀態
-                    btn.innerHTML = '✅ 轉換成功！(已下載)';
-                } else {
-                    btn.innerHTML = '❌ 轉換失敗，請重試';
+                    // 轉換為圖片 Blob
+                    const qualityParam = mimeType === 'image/jpeg' ? 0.95 : undefined;
+                    const blob = await canvasToBlobAsync(canvas, mimeType, qualityParam);
+                    
+                    // 加入 Zip
+                    zip.file(`${baseFilename}_page_${pageNum}.${ext}`, blob);
                 }
+
+                // 4. 生成並下載 Zip
+                btn.innerHTML = '📦 正在打包 Zip...';
+                const zipContent = await zip.generateAsync({ type: "blob" });
+                
+                const downloadUrl = URL.createObjectURL(zipContent);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `${baseFilename}_converted.zip`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(downloadUrl);
+
+                btn.innerHTML = '✅ 轉換成功！(已下載)';
+
             } catch (error) {
-                btn.innerHTML = '❌ 連線錯誤';
+                console.error(error);
+                btn.innerHTML = '❌ 轉換發生錯誤';
             } finally {
-                // 3秒後還原按鈕
                 btn.classList.remove('breathing');
                 setTimeout(() => {
                     btn.disabled = false;
