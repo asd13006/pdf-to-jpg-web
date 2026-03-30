@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-HK" class="dark">
+<html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,15 +12,7 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        darkbg: '#0a0a0a', // 純黑主調
-                        darkcard: '#171717', // 深灰卡片
-                        darkborder: '#262626'
-                    }
-                }
-            }
+            theme: { extend: { colors: { darkbg: '#0a0a0a', darkcard: '#171717', darkborder: '#262626' } } }
         }
     </script>
     
@@ -28,26 +20,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <style>
-        /* 基礎過渡動畫 */
         body { transition: background-color 0.3s, color 0.3s; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        
-        /* 元件樣式 */
         .glass-panel { transition: all 0.3s ease; }
         .btn-primary { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); transition: all 0.3s ease; color: white; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3); }
         .btn-primary:disabled { background: #475569; transform: none; box-shadow: none; cursor: not-allowed; opacity: 0.7; }
         
-        /* 動畫 */
         .breathing { animation: breathe 2s infinite ease-in-out; }
         @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .drag-over { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.05) !important; transform: scale(1.02); }
         
-        /* 隱藏/顯示狀態 */
+        .drag-over { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.1) !important; transform: scale(1.02); }
+        
         .hidden-state { opacity: 0; transform: translateY(10px); pointer-events: none; position: absolute; visibility: hidden; }
         .visible-state { opacity: 1; transform: translateY(0); position: relative; visibility: visible; transition: opacity 0.4s ease, transform 0.4s ease; }
         
-        /* Modal 樣式 */
         dialog::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
+        /* 隱藏滾動條但保留功能 */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-darkbg dark:text-gray-100 min-h-screen flex flex-col">
@@ -59,8 +50,8 @@
                 <span class="font-bold text-lg tracking-tight" data-i18n="logoText">PDF2IMG Pro</span>
             </div>
             
-            <div class="flex items-center gap-2 sm:gap-4">
-                <button id="installAppBtn" class="hidden sm:flex items-center gap-1 text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/50 transition">
+            <div class="flex items-center gap-3 sm:gap-4">
+                <button id="installAppBtn" class="hidden items-center gap-1 text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-3 py-1.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     <span data-i18n="installApp">下載到電腦</span>
                 </button>
@@ -70,7 +61,7 @@
                     <option value="en">English</option>
                 </select>
                 
-                <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition" aria-label="Toggle Theme">
+                <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition" title="切換深淺色">
                     <span id="themeIconDark" class="hidden">🌙</span>
                     <span id="themeIconLight">☀️</span>
                 </button>
@@ -81,31 +72,28 @@
     <main class="flex-grow w-full max-w-6xl mx-auto px-4 py-12 flex flex-col items-center">
         
         <div class="mb-10 text-center max-w-2xl">
-            <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4" data-i18n="heroTitle">
-                極速 PDF 轉換工具
-            </h1>
-            <p class="text-gray-500 dark:text-gray-400 text-lg" data-i18n="heroSub">
-                100% 本地瀏覽器運算。保障機密安全，無需上傳至任何伺服器。
-            </p>
+            <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4" data-i18n="heroTitle">極速 PDF 轉換工具</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-lg" data-i18n="heroSub">100% 本地瀏覽器運算。保障機密安全，無需上傳至任何伺服器。</p>
         </div>
 
         <input type="file" id="fileInput" accept=".pdf" class="hidden" multiple onchange="handleFilesSelected(event)">
 
         <div class="w-full relative min-h-[400px]">
             <div id="step1-upload" class="visible-state w-full max-w-3xl mx-auto">
-                <div id="dropZone" class="glass-panel bg-white dark:bg-darkcard border-2 border-dashed border-gray-300 dark:border-darkborder rounded-3xl p-10 sm:p-16 text-center transition-all duration-300 shadow-sm" >
-                    <div class="cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                <div id="dropZone" class="glass-panel bg-white dark:bg-darkcard border-2 border-dashed border-gray-300 dark:border-darkborder rounded-3xl p-10 sm:p-16 text-center transition-all duration-300 shadow-sm relative">
+                    <div class="cursor-pointer pointer-events-none">
                         <div class="text-6xl mb-6" id="dropIcon">☁️</div>
-                        <h3 class="text-2xl font-bold mb-2" data-i18n="dropTitle">點擊或拖曳 PDF 檔案至此</h3>
+                        <h3 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white" data-i18n="dropTitle">點擊或拖曳 PDF 檔案至此</h3>
                         <p class="text-gray-500 dark:text-gray-400 mb-8" data-i18n="dropDesc">支援批次處理，自動分類資料夾</p>
                     </div>
+                    <div class="absolute inset-0 cursor-pointer z-10" onclick="document.getElementById('fileInput').click()"></div>
                     
-                    <div class="flex items-center justify-center gap-4 border-t border-gray-200 dark:border-darkborder pt-6 mt-2">
+                    <div class="relative z-20 flex items-center justify-center gap-4 border-t border-gray-200 dark:border-darkborder pt-6 mt-2">
                         <span class="text-sm text-gray-400" data-i18n="orImport">或從雲端匯入：</span>
-                        <button onclick="alertCloudAPI('Google Drive')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm">
+                        <button onclick="openCloudModal('Google Drive')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300">
                             <img src="https://img.icons8.com/color/48/google-drive--v1.png" class="w-5 h-5" alt="Drive"> Drive
                         </button>
-                        <button onclick="alertCloudAPI('Dropbox')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm">
+                        <button onclick="openCloudModal('Dropbox')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300">
                             <img src="https://img.icons8.com/color/48/dropbox.png" class="w-5 h-5" alt="Dropbox"> Dropbox
                         </button>
                     </div>
@@ -118,7 +106,7 @@
                         <h2 class="text-xl font-bold"><span data-i18n="pendingFiles">待轉換檔案</span> (<span id="fileCount">0</span>)</h2>
                         <button onclick="document.getElementById('fileInput').click()" class="text-sm text-blue-600 dark:text-blue-400 font-medium" data-i18n="addMore">+ 加入更多</button>
                     </div>
-                    <div id="fileListContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-2"></div>
+                    <div id="fileListContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar"></div>
                 </div>
 
                 <div class="w-full lg:w-80 shrink-0">
@@ -144,7 +132,7 @@
                         </div>
 
                         <button id="convertBtn" onclick="startConversion()" class="btn-primary w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2">
-                            <span data-i18n="btnStart">🚀 開始批次轉換</span>
+                            <span id="convertBtnText" data-i18n="btnStart">🚀 開始批次轉換</span>
                         </button>
                         <p id="progressText" class="text-center text-sm text-gray-500 mt-4 h-5"></p>
                     </div>
@@ -192,7 +180,7 @@
 
     <footer class="w-full bg-gray-100 dark:bg-[#050505] py-12 border-t border-gray-200 dark:border-darkborder">
         <div class="max-w-6xl mx-auto px-4">
-            <div class="flex flex-wrap justify-center gap-6 md:gap-10 text-sm font-medium text-gray-500 dark:text-gray-400 mb-8">
+            <div class="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm font-medium text-gray-500 dark:text-gray-400 mb-8">
                 <button onclick="openModal('about')" class="hover:text-blue-500 transition" data-i18n="footAbout">關於我們</button>
                 <button onclick="openModal('faq')" class="hover:text-blue-500 transition" data-i18n="footFAQ">常見問題</button>
                 <button onclick="openModal('help')" class="hover:text-blue-500 transition" data-i18n="footHelp">幫助中心</button>
@@ -202,26 +190,29 @@
                 <button onclick="openModal('settings')" class="hover:text-blue-500 transition" data-i18n="footSettings">私隱設定</button>
             </div>
             <div class="text-center text-xs text-gray-400 dark:text-gray-600">
-                <p>&copy; 2026 PDF2IMG Pro. All rights reserved.</p>
-                <p class="mt-2 text-gray-300 dark:text-gray-700">Develop by Leo Lai v1.0.0</p>
+                <p>&copy; 2026 YouTube Title Studio. All rights reserved.</p>
+                <p class="mt-2 text-gray-400 dark:text-gray-500 font-medium">Develop by Leo Lai v1.1.0</p>
             </div>
         </div>
     </footer>
 
-    <dialog id="infoModal" class="bg-white dark:bg-darkcard rounded-2xl shadow-2xl p-0 w-full max-w-2xl border border-gray-200 dark:border-darkborder text-gray-900 dark:text-gray-100">
+    <dialog id="infoModal" class="bg-white dark:bg-darkcard rounded-2xl shadow-2xl p-0 w-[90%] max-w-2xl border border-gray-200 dark:border-darkborder text-gray-900 dark:text-gray-100 backdrop:bg-black/60">
         <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-darkborder">
             <h3 id="modalTitle" class="text-xl font-bold">標題</h3>
-            <button onclick="document.getElementById('infoModal').close()" class="text-gray-400 hover:text-red-500 text-2xl font-bold">&times;</button>
+            <button onclick="document.getElementById('infoModal').close()" class="text-gray-400 hover:text-red-500 text-3xl leading-none">&times;</button>
         </div>
-        <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+        <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto text-sm leading-relaxed text-gray-600 dark:text-gray-300 space-y-4 custom-scrollbar">
             內容
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-darkborder text-right bg-gray-50 dark:bg-[#0f0f0f] rounded-b-2xl">
+            <button onclick="document.getElementById('infoModal').close()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition" data-i18n="btnClose">關閉</button>
         </div>
     </dialog>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // ================= 1. 多語言系統 (i18n) =================
+        // ================= 1. 完善的多語言與資料庫 (i18n) =================
         const translations = {
             zh: {
                 pageTitle: "YouTube Title Studio - PDF 專業轉換工具", logoText: "PDF2IMG Pro", installApp: "下載到電腦",
@@ -235,7 +226,9 @@
                 feat2Title: "支援超高解析度", feat2Desc: "高達 3.0x 的無損渲染技術，無論是細緻的 CAD 建築圖則還是高清海報，細節依然銳利清晰。",
                 feat3Title: "智能批次引擎", feat3Desc: "拖曳多份文件，獨立設定分頁範圍。系統會自動為您分類資料夾並打包成一個整潔的 ZIP 檔。",
                 footAbout: "關於我們", footFAQ: "常見問題", footHelp: "幫助中心", footContact: "聯絡我們", footTerms: "使用條款", footPrivacy: "私隱政策", footSettings: "私隱設定",
-                placeholderPage: "例: 1-3, 5 (留空代表全轉)", lblPageRange: "📑 分頁範圍："
+                placeholderPage: "例: 1-3, 5 (留空代表全轉)", lblPageRange: "📑 分頁範圍：", btnClose: "關閉",
+                sysRead: "正在讀取：", sysConvert: "正在轉換：", sysZip: "📦 打包 Zip 中...", sysZipWait: "正在壓縮圖片，請稍候...", sysErr: "發生錯誤，請檢查檔案。",
+                cloudTitle: "雲端連接 (沙盒模式)", cloudDesc: "您目前正在嘗試連接 {provider}。<br><br>為保障最高級別的帳戶安全，系統管理員 (Leo Lai) 尚未正式啟用此 API 端點。請暫時使用本地上傳功能。"
             },
             en: {
                 pageTitle: "YouTube Title Studio - PDF Converter", logoText: "PDF2IMG Pro", installApp: "Install App",
@@ -246,35 +239,70 @@
                 format: "Output Format", btnStart: "🚀 Start Batch Conversion", successTitle: "Conversion Complete!", successDesc: "Your ZIP file is downloading automatically.",
                 btnManualDl: "📥 Manual Download", btnReset: "🔄 Convert New Files",
                 whyChoose: "Why Choose Us?", feat1Title: "Military-Grade Privacy", feat1Desc: "Files are processed 100% locally on your device. Zero server uploads, fully compliant with NDA requirements.",
-                feat2Title: "Ultra High Resolution", feat2Desc: "Lossless rendering up to 3.0x. Perfect for detailed CAD drawings, architectural plans, and HD posters.",
+                feat2Title: "Ultra High Resolution", feat2Desc: "Lossless rendering up to 3.0x. Perfect for detailed CAD drawings and HD posters.",
                 feat3Title: "Smart Batch Engine", feat3Desc: "Drag multiple files, set page ranges independently. Our engine auto-sorts folders and zips them neatly.",
                 footAbout: "About Us", footFAQ: "FAQ", footHelp: "Help", footContact: "Contact", footTerms: "Terms of Use", footPrivacy: "Privacy Policy", footSettings: "Privacy Settings",
-                placeholderPage: "e.g., 1-3, 5 (Blank for all)", lblPageRange: "📑 Page Range:"
+                placeholderPage: "e.g., 1-3, 5 (Blank for all)", lblPageRange: "📑 Page Range:", btnClose: "Close",
+                sysRead: "Reading: ", sysConvert: "Converting: ", sysZip: "📦 Zipping...", sysZipWait: "Compressing, please wait...", sysErr: "An error occurred. Check your file.",
+                cloudTitle: "Cloud Connection (Sandbox)", cloudDesc: "You are attempting to connect to {provider}.<br><br>For maximum account security, the system admin (Leo Lai) has not yet activated this API endpoint. Please use local upload for now."
             }
         };
 
-        // 自動偵測瀏覽器語言
-        let currentLang = navigator.language.startsWith('zh') ? 'zh' : 'en';
+        const modalContents = {
+            about: { 
+                zh: "<p class='font-bold mb-2'>歡迎來到 PDF2IMG Pro</p><p>我們是由 Leo Lai 開發的專業工具團隊。有感於市面上許多 PDF 工具充斥廣告且存在嚴重的檔案外洩風險，我們致力於利用純前端 WebAssembly 技術，為專業人士（如工程師、設計師）打造 100% 本地端運算的生產力工具。</p>", 
+                en: "<p class='font-bold mb-2'>Welcome to PDF2IMG Pro</p><p>Developed by Leo Lai, we aim to provide professionals with 100% local, frontend-based productivity tools to eliminate privacy risks common in other online converters.</p>" 
+            },
+            faq: { 
+                zh: "<p class='font-bold'>Q: 我的 PDF 檔案會被上傳到伺服器嗎？</p><p class='mb-4'>A: 絕對不會。本工具的運算核心 (PDF.js) 運行於您的瀏覽器內存中，斷網狀態下依然可以運作。</p><p class='font-bold'>Q: 為什麼轉換速度有時快有時慢？</p><p>A: 由於是本地運算，轉換速度完全取決於您電腦的 CPU 效能及您所選擇的畫質倍率。</p>", 
+                en: "<p class='font-bold'>Q: Are my PDFs uploaded?</p><p class='mb-4'>A: Never. Processing happens entirely in your browser's memory.</p><p class='font-bold'>Q: Why does conversion speed vary?</p><p>A: Since it uses local processing, speed depends on your device's CPU and the selected quality.</p>" 
+            },
+            privacy: { 
+                zh: "<p class='font-bold text-lg mb-2 text-blue-500'>最高機密保護聲明</p><p>1. <b>零數據收集：</b> 我們不追蹤、不讀取、不備份您的任何文件內容。<br>2. <b>記憶體揮發：</b> 轉換完成並關閉網頁後，所有的暫存圖像數據將會從您的電腦記憶體中徹底抹除。<br>3. <b>無 Cookie 追蹤：</b> 本站僅使用 LocalStorage 記錄您的深淺色與語言偏好。</p>", 
+                en: "<p class='font-bold text-lg mb-2 text-blue-500'>Ultimate Privacy Statement</p><p>1. <b>Zero Data Collection:</b> We do not track or back up your files.<br>2. <b>Volatile Memory:</b> All cached images are erased from your RAM once you close the page.<br>3. <b>No Tracking Cookies:</b> We only save your theme and language preferences locally.</p>" 
+            },
+            terms: { 
+                zh: "<p>1. <b>合法用途：</b> 使用者必須保證上傳之文件不違反當地版權法例。<br>2. <b>免責聲明：</b> 本工具「按原樣」提供。對於因瀏覽器崩潰而導致的任何未保存進度遺失，開發者恕不負責。</p>", 
+                en: "<p>1. <b>Legal Use:</b> Users must ensure processed files do not violate copyright laws.<br>2. <b>Disclaimer:</b> Provided 'as is'. We are not responsible for lost progress due to browser crashes.</p>" 
+            },
+            help: { 
+                zh: "<p>遇到轉換失敗？請嘗試以下步驟：<br><br>1. 確保您的 PDF 沒有密碼保護。<br>2. 如果文件頁數超過 100 頁，請嘗試降低「影像畫質」至 1.0x 以防記憶體不足。<br>3. 更新您的瀏覽器至最新版本 (推薦使用 Chrome 或 Edge)。</p>", 
+                en: "<p>Conversion failed? Try this:<br><br>1. Ensure your PDF is not password protected.<br>2. For PDFs > 100 pages, lower quality to 1.0x to save memory.<br>3. Update your browser (Chrome/Edge recommended).</p>" 
+            },
+            contact: { 
+                zh: "<p>商務合作、API 授權或系統除錯，請聯絡開發者：<br><br><b>工程師：</b> Leo Lai<br><b>專案名稱：</b> YouTube Title Studio 附屬套件</p>", 
+                en: "<p>For business inquiries, API licensing, or debugging:<br><br><b>Developer:</b> Leo Lai<br><b>Project:</b> YouTube Title Studio Utilities</p>" 
+            },
+            settings: { 
+                zh: "<p class='text-center text-5xl mb-4'>🛡️</p><p class='text-center'>因為我們堅持 <b>零追蹤、零上傳、零廣告</b> 的原則，所以您不需要進行任何複雜的私隱設定撤銷。<br><br>您的資料，永遠屬於您。</p>", 
+                en: "<p class='text-center text-5xl mb-4'>🛡️</p><p class='text-center'>Because we strictly follow a <b>Zero-Tracking, Zero-Upload</b> policy, there are no complicated privacy settings to manage here.<br><br>Your data remains yours.</p>" 
+            }
+        };
+
+        // ================= 2. 記憶功能 (LocalStorage) =================
+        let currentLang = localStorage.getItem('app_lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
         document.getElementById('langSwitcher').value = currentLang;
 
         function changeLanguage(lang) {
             currentLang = lang;
+            localStorage.setItem('app_lang', lang);
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
-                if (translations[lang][key]) { el.innerText = translations[lang][key]; }
+                if (translations[lang][key]) {
+                    if (el.tagName === 'INPUT' && el.type === 'button') el.value = translations[lang][key];
+                    else el.innerText = translations[lang][key];
+                }
             });
-            // 更新動態生成的元件
             if (selectedFiles.length > 0) renderFileList();
         }
-        changeLanguage(currentLang); // 初始化語言
+        changeLanguage(currentLang);
 
-        // ================= 2. 深淺色模式切換 =================
         const htmlEl = document.documentElement;
         const themeIconDark = document.getElementById('themeIconDark');
         const themeIconLight = document.getElementById('themeIconLight');
-
-        // 偵測系統設定
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        
+        let savedTheme = localStorage.getItem('app_theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             htmlEl.classList.add('dark'); themeIconLight.classList.remove('hidden'); themeIconDark.classList.add('hidden');
         } else {
             htmlEl.classList.remove('dark'); themeIconLight.classList.add('hidden'); themeIconDark.classList.remove('hidden');
@@ -283,51 +311,47 @@
         function toggleTheme() {
             htmlEl.classList.toggle('dark');
             const isDark = htmlEl.classList.contains('dark');
+            localStorage.setItem('app_theme', isDark ? 'dark' : 'light');
             themeIconLight.classList.toggle('hidden', !isDark);
             themeIconDark.classList.toggle('hidden', isDark);
         }
 
-        // ================= 3. 模態框 (Modal) 內容 =================
-        const modalContents = {
-            about: { zh: "我們致力於提供最安全、最高效的本地文件處理工具...", en: "We are dedicated to providing the most secure and efficient local document tools..." },
-            faq: { zh: "Q: 檔案會上傳嗎？\nA: 絕對不會，所有處理都在您的瀏覽器內完成。", en: "Q: Are files uploaded?\nA: Absolutely not. All processing is done in your browser." },
-            privacy: { zh: "【最高私隱聲明】本程式採用純前端架構。我們不收集、不儲存、不上傳您的任何 PDF 檔案。您的資料100%保留在您的設備上。", en: "[Ultimate Privacy] This app uses a pure frontend architecture. We do not collect, store, or upload any PDFs." },
-            terms: { zh: "請合法使用本工具，不得用於處理非法版權文件...", en: "Please use this tool legally. Do not process illegal copyrighted documents..." },
-            help: { zh: "如需協助，請電郵至 support@example.com", en: "For assistance, email support@example.com" },
-            contact: { zh: "聯絡信箱：contact@example.com", en: "Contact: contact@example.com" },
-            settings: { zh: "因為我們沒有追蹤您的資料，所以沒有需要設定的私隱選項。👍", en: "Since we do not track your data, there are no privacy settings needed. 👍" }
-        };
-
+        // ================= 3. UI 互動邏輯 =================
         function openModal(type) {
             const modal = document.getElementById('infoModal');
             document.getElementById('modalTitle').innerText = translations[currentLang][`foot${type.charAt(0).toUpperCase() + type.slice(1)}`];
-            document.getElementById('modalContent').innerText = modalContents[type][currentLang];
+            document.getElementById('modalContent').innerHTML = modalContents[type][currentLang];
             modal.showModal();
         }
 
-        // ================= 4. 雲端 API 提示 =================
-        function alertCloudAPI(provider) {
-            const msg = currentLang === 'zh' ? 
-                `連接 ${provider} 需要配置 API Key 及 Oauth 驗證。此功能將於正式上線版本開放。` : 
-                `Connecting to ${provider} requires API Key and OAuth setup. Available in the production release.`;
-            alert(msg);
+        function openCloudModal(provider) {
+            const modal = document.getElementById('infoModal');
+            document.getElementById('modalTitle').innerText = translations[currentLang]['cloudTitle'];
+            document.getElementById('modalContent').innerHTML = `<div class="text-center p-4"><img src="https://img.icons8.com/color/96/${provider.toLowerCase().replace(' ', '-')}.png" class="mx-auto mb-4"><p class="text-lg">${translations[currentLang]['cloudDesc'].replace('{provider}', provider)}</p></div>`;
+            modal.showModal();
         }
 
-        // ================= 5. 核心 PDF 邏輯 (保留並適配 UI) =================
+        // ================= 4. 修復的拖曳與 PDF 邏輯 =================
         let selectedFiles = [];
         let finalZipBlob = null;
         const step1 = document.getElementById('step1-upload');
         const step2 = document.getElementById('step2-workspace');
         const step3 = document.getElementById('step3-success');
         const dropZone = document.getElementById('dropZone');
-        const convertBtn = document.getElementById('convertBtn');
-        const progressText = document.getElementById('progressText');
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => window.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false));
-        ['dragenter', 'dragover'].forEach(eName => dropZone.addEventListener(eName, () => dropZone.classList.add('drag-over'), false));
-        ['dragleave', 'drop'].forEach(eName => dropZone.addEventListener(eName, () => dropZone.classList.remove('drag-over'), false));
-        window.addEventListener('drop', (e) => { handleNewFiles(e.dataTransfer.files); dropZone.classList.remove('drag-over'); });
-        
+        // 攔截全螢幕的默認行為，防止瀏覽器打開 PDF
+        window.addEventListener('dragover', e => e.preventDefault(), false);
+        window.addEventListener('drop', e => e.preventDefault(), false);
+
+        // 綁定 DropZone 的事件
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleNewFiles(e.dataTransfer.files);
+        });
+
         function handleFilesSelected(e) { handleNewFiles(e.target.files); e.target.value = ""; }
 
         function handleNewFiles(fileList) {
@@ -359,8 +383,6 @@
         function renderFileList() {
             const container = document.getElementById('fileListContainer');
             container.innerHTML = '';
-            const lblPage = translations[currentLang].lblPageRange;
-            const placeholder = translations[currentLang].placeholderPage;
             
             selectedFiles.forEach((item, index) => {
                 const sizeMB = (item.file.size / (1024 * 1024)).toFixed(1);
@@ -378,8 +400,8 @@
                         <button onclick="removeFile(${index})" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition">✕</button>
                     </div>
                     <div class="bg-gray-50 dark:bg-[#0f0f0f] rounded-lg p-2 flex items-center gap-2 border border-gray-200 dark:border-gray-800">
-                        <span class="text-xs text-gray-500 whitespace-nowrap">${lblPage}</span>
-                        <input type="text" placeholder="${placeholder}" value="${item.pageRange}" onchange="updatePageRange(${index}, this.value)" class="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-sm px-1 py-1 transition-colors dark:text-gray-200">
+                        <span class="text-xs text-gray-500 whitespace-nowrap">${translations[currentLang].lblPageRange}</span>
+                        <input type="text" placeholder="${translations[currentLang].placeholderPage}" value="${item.pageRange}" onchange="updatePageRange(${index}, this.value)" class="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-sm px-1 py-1 transition-colors dark:text-gray-200">
                     </div>
                 `;
                 container.appendChild(card);
@@ -414,6 +436,10 @@
             const mimeType = document.getElementById('formatSelect').value;
             const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
 
+            const convertBtnText = document.getElementById('convertBtnText');
+            const convertBtn = document.getElementById('convertBtn');
+            const progressText = document.getElementById('progressText');
+
             convertBtn.disabled = true;
             convertBtn.classList.add('breathing');
             document.querySelectorAll('#fileListContainer input, #fileListContainer button').forEach(el => el.disabled = true);
@@ -424,7 +450,7 @@
                     const fileObj = selectedFiles[f];
                     const baseFilename = fileObj.file.name.replace(/\.[^/.]+$/, "");
                     
-                    progressText.innerText = currentLang === 'zh' ? `正在讀取: ${baseFilename.substring(0, 15)}...` : `Reading: ${baseFilename.substring(0, 15)}...`;
+                    progressText.innerText = `${translations[currentLang].sysRead} ${baseFilename.substring(0, 15)}...`;
                     await yieldThread();
                     
                     const arrayBuffer = await new Promise((resolve, reject) => {
@@ -440,8 +466,8 @@
 
                     for (let i = 0; i < targetPages.length; i++) {
                         const pageNum = targetPages[i];
-                        convertBtn.innerHTML = `⟳ ${currentLang==='zh'?'檔案':'File'} ${f+1}/${selectedFiles.length}`;
-                        progressText.innerText = currentLang === 'zh' ? `正在轉換: 第 ${pageNum} 頁` : `Converting: Page ${pageNum}`;
+                        convertBtnText.innerText = `⟳ ${currentLang==='zh'?'檔案':'File'} ${f+1}/${selectedFiles.length}`;
+                        progressText.innerText = `${translations[currentLang].sysConvert} ${currentLang==='zh'?'第 ':''}${pageNum}${currentLang==='zh'?' 頁':''}`;
                         await yieldThread();
                         
                         const page = await pdf.getPage(pageNum);
@@ -459,8 +485,8 @@
                     }
                 }
 
-                convertBtn.innerHTML = currentLang === 'zh' ? '📦 打包 Zip 中...' : '📦 Zipping...';
-                progressText.innerText = currentLang === 'zh' ? "正在壓縮圖片，請稍候..." : "Compressing, please wait...";
+                convertBtnText.innerText = translations[currentLang].sysZip;
+                progressText.innerText = translations[currentLang].sysZipWait;
                 await yieldThread();
                 
                 finalZipBlob = await zip.generateAsync({ type: "blob" });
@@ -469,8 +495,8 @@
 
             } catch (error) {
                 console.error(error);
-                convertBtn.innerHTML = '❌ Error';
-                progressText.innerText = currentLang === 'zh' ? "發生錯誤，請檢查檔案。" : "An error occurred. Check your file.";
+                document.getElementById('convertBtnText').innerText = '❌ Error';
+                document.getElementById('progressText').innerText = translations[currentLang].sysErr;
                 setTimeout(() => { resetApp(); }, 3000);
             }
         }
@@ -489,29 +515,44 @@
 
         function resetApp() {
             selectedFiles = []; finalZipBlob = null;
+            const convertBtn = document.getElementById('convertBtn');
             convertBtn.disabled = false; convertBtn.classList.remove('breathing');
-            convertBtn.innerHTML = translations[currentLang].btnStart;
-            progressText.innerText = "";
+            document.getElementById('convertBtnText').innerText = translations[currentLang].btnStart;
+            document.getElementById('progressText').innerText = "";
             updateUIState();
         }
         
-        // PWA 安裝邏輯
+        // ================= 5. PWA 安裝邏輯實裝 =================
         let deferredPrompt;
+        const installBtn = document.getElementById('installAppBtn');
+        
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // 顯示安裝按鈕
+            // 系統允許安裝時，顯示右上角按鈕
+            installBtn.classList.remove('hidden');
+            installBtn.classList.add('flex');
         });
         
-        document.getElementById('installAppBtn').addEventListener('click', async () => {
+        installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.classList.add('hidden'); // 安裝成功後隱藏按鈕
+                }
                 deferredPrompt = null;
-            } else {
-                alert(currentLang === 'zh' ? "您的瀏覽器不支援直接安裝，或應用程式已安裝。" : "Install not supported or already installed.");
             }
         });
+
+        // 註冊 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {
+                    // 靜默處理，避免拋出錯誤
+                });
+            });
+        }
     </script>
 </body>
 </html>
