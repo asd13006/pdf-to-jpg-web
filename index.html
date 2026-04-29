@@ -19,6 +19,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     
     <style>
         body { transition: background-color 0.3s, color 0.3s; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -201,6 +202,49 @@
                             </div>
                         </div>
                     </div>
+                    <div class="border-t border-gray-200 dark:border-darkborder pt-5 mb-2">
+                        <label class="flex items-center gap-2 cursor-pointer mb-3">
+                            <input type="checkbox" id="enablePageNumber" class="rounded" onchange="togglePageNumberSettings()">
+                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300" data-i18n="enablePageNumber">加入頁碼</span>
+                        </label>
+                        <div id="pageNumberSettings" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4 pl-2">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1" data-i18n="pnPosition">頁碼位置</label>
+                                <select id="pnPosition" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
+                                    <option value="bottom-center" selected data-i18n="pnBottomCenter">底部中間</option>
+                                    <option value="bottom-right" data-i18n="pnBottomRight">底部右側</option>
+                                    <option value="bottom-left" data-i18n="pnBottomLeft">底部左側</option>
+                                    <option value="top-center" data-i18n="pnTopCenter">頂部中間</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1" data-i18n="pnFormat">頁碼格式</label>
+                                <select id="pnFormat" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
+                                    <option value="1" selected>1</option>
+                                    <option value="1/N">1/10</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-200 dark:border-darkborder pt-5">
+                        <label class="flex items-center gap-2 cursor-pointer mb-3">
+                            <input type="checkbox" id="enableSignature" class="rounded" onchange="toggleSignatureSettings()">
+                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300" data-i18n="enableSignature">加入簽名</span>
+                        </label>
+                        <div id="signatureSettings" class="hidden pl-2">
+                            <canvas id="signaturePad" width="400" height="150" class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-white cursor-crosshair mb-2" style="touch-action:none"></canvas>
+                            <div class="flex items-center gap-4">
+                                <button onclick="clearSignature()" class="text-xs font-medium text-red-500 hover:text-red-700 transition" data-i18n="sigClear">清除重簽</button>
+                                <select id="sigPosition" class="bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-xs">
+                                    <option value="bottom-right" selected data-i18n="sigBottomRight">右下角</option>
+                                    <option value="bottom-left" data-i18n="sigBottomLeft">左下角</option>
+                                    <option value="top-right" data-i18n="sigTopRight">右上角</option>
+                                    <option value="center" data-i18n="sigCenter">正中間</option>
+                                </select>
+                                <span class="text-xs text-gray-400" data-i18n="sigHint">用滑鼠在框內簽名</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ====== 模式 2: 圖片 → PDF ====== -->
@@ -235,11 +279,15 @@
                         <button onclick="moveFileItem(-1)" class="hover:text-blue-500 transition" data-i18n="moveUp">⬆ 上移</button>
                         <button onclick="moveFileItem(1)" class="hover:text-blue-500 transition" data-i18n="moveDown">⬇ 下移</button>
                     </div>
+                    <div class="flex items-center justify-center gap-3 pt-3 border-t border-gray-200 dark:border-darkborder">
+                        <input type="checkbox" id="mergeCompress" class="rounded">
+                        <span class="text-sm text-gray-500 dark:text-gray-400" data-i18n="mergeCompressLabel">合併後同時壓縮</span>
+                    </div>
                 </div>
 
                 <!-- ====== 模式 4: 分割 PDF ====== -->
                 <div id="settingsSplit" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-3">
                         <div>
                             <label class="flex items-center gap-2 mb-3 cursor-pointer" onclick="document.getElementById('splitByN').checked=true;toggleSplitMode()">
                                 <input type="radio" name="splitMode" id="splitByN" value="everyN" checked onchange="toggleSplitMode()" class="text-blue-600">
@@ -255,6 +303,13 @@
                             <input type="text" id="splitRanges" placeholder="例: 1-3, 4-6, 7-10" disabled class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm disabled:opacity-50">
                         </div>
                     </div>
+                    <div class="border-t border-gray-200 dark:border-darkborder pt-4">
+                        <label class="flex items-center gap-2 mb-3 cursor-pointer" onclick="document.getElementById('splitDelete').checked=true;toggleSplitMode()">
+                            <input type="radio" name="splitMode" id="splitDelete" value="delete" onchange="toggleSplitMode()" class="text-blue-600">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="splitDeletePages">刪除指定頁面</span>
+                        </label>
+                        <input type="text" id="splitDeleteRange" placeholder="例: 1, 3, 5-7" disabled class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm disabled:opacity-50">
+                    </div>
                 </div>
 
                 <!-- ====== 模式 5: 擷取文字 ====== -->
@@ -269,6 +324,7 @@
                             <select id="extractFormat" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
                                 <option value="txt" selected>TXT</option>
                                 <option value="json">JSON</option>
+                                <option value="html" data-i18n="extractHtml">HTML</option>
                             </select>
                         </div>
                     </div>
@@ -297,6 +353,16 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-2" data-i18n="infoHint">選擇 PDF 檔案後自動顯示詳細資訊</p>
                     <div id="pdfInfoResult" class="space-y-2 text-sm"></div>
                     <div id="pdfThumbnails" class="flex flex-wrap gap-3 mt-4 justify-center"></div>
+                    <div id="metadataEdit" class="hidden border-t border-gray-200 dark:border-darkborder mt-4 pt-4">
+                        <p class="text-sm font-bold mb-3" data-i18n="editMetadata">編輯 Metadata 並儲存</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div><label class="block text-xs text-gray-500 mb-1" data-i18n="metaTitle">標題 Title</label><input type="text" id="metaTitle" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm"></div>
+                            <div><label class="block text-xs text-gray-500 mb-1" data-i18n="metaAuthor">作者 Author</label><input type="text" id="metaAuthor" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm"></div>
+                            <div><label class="block text-xs text-gray-500 mb-1" data-i18n="metaSubject">主題 Subject</label><input type="text" id="metaSubject" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm"></div>
+                            <div><label class="block text-xs text-gray-500 mb-1" data-i18n="metaKeywords">關鍵字 Keywords</label><input type="text" id="metaKeywords" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm"></div>
+                        </div>
+                        <button onclick="saveMetadata()" class="btn-primary w-full mt-4 py-3 rounded-xl font-bold text-sm" data-i18n="saveMetadataBtn">💾 儲存 Metadata 並下載 PDF</button>
+                    </div>
                 </div>
 
                 <!-- ====== 模式 8: 壓縮 PDF ====== -->
@@ -310,6 +376,51 @@
                         </select>
                     </div>
                     <div id="compressResult" class="hidden text-sm text-center py-2"></div>
+                </div>
+
+                <!-- ====== 模式 9: 加密 PDF ====== -->
+                <div id="settingsEncrypt" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="encUserPwd">用戶密碼 (開啟文件需輸入)</label>
+                            <input type="password" id="encUserPwd" placeholder="••••••" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="encOwnerPwd">擁有者密碼 (管理權限用)</label>
+                            <input type="password" id="encOwnerPwd" placeholder="••••••" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="encPermissions">文件權限：</span>
+                    </div>
+                    <div class="flex flex-wrap gap-4 mb-4 pl-2">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                            <input type="checkbox" id="encAllowPrint" checked class="rounded"> <span data-i18n="encPrint">允許列印</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                            <input type="checkbox" id="encAllowCopy" checked class="rounded"> <span data-i18n="encCopy">允許複製內容</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                            <input type="checkbox" id="encAllowModify" class="rounded"> <span data-i18n="encModify">允許修改</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 10: 頁面排序 ====== -->
+                <div id="settingsReorder" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-3" data-i18n="reorderHint">選擇單個 PDF，顯示所有頁面縮圖，使用箭頭排序或點擊 ✕ 刪除。</p>
+                    <div id="reorderThumbnails" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto custom-scrollbar p-2"></div>
+                    <div class="flex justify-center gap-4 mt-4">
+                        <button onclick="resetReorder()" class="text-xs font-medium text-gray-500 hover:text-blue-500 transition" data-i18n="reorderReset">⟲ 重置</button>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 11: PDF → Word ====== -->
+                <div id="settingsPDF2Word" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="pdf2wordPageRange">頁面範圍 (留空=全部)</label>
+                        <input type="text" id="pdf2wordPageRange" placeholder="例: 1-5, 8" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                    </div>
                 </div>
 
                 <div class="mt-6">
@@ -359,7 +470,7 @@
             </div>
             <div class="text-center text-xs text-gray-400 dark:text-gray-600">
                 <p>&copy; 2026 YouTube Title Studio. All rights reserved.</p>
-                <p class="mt-2 text-gray-400 dark:text-gray-500 font-medium">Develop by Leo Lai v2.0.0</p>
+                <p class="mt-2 text-gray-400 dark:text-gray-500 font-medium">Develop by Leo Lai v2.1.0</p>
             </div>
         </div>
     </footer>
@@ -449,6 +560,27 @@
                 desc: { zh: '縮小 PDF 檔案大小', en: 'Reduce PDF file size' },
                 accept: '.pdf', multiple: true, dropIcon: '📦',
                 settingsPanel: 'settingsCompress', action: 'startCompress'
+            },
+            encrypt: {
+                id: 'encrypt', icon: '🔐',
+                title: { zh: '加密 PDF', en: 'Encrypt PDF' },
+                desc: { zh: '為 PDF 設定密碼保護', en: 'Add password protection to PDF' },
+                accept: '.pdf', multiple: true, dropIcon: '🔒',
+                settingsPanel: 'settingsEncrypt', action: 'startEncrypt'
+            },
+            reorder: {
+                id: 'reorder', icon: '🔀',
+                title: { zh: '頁面排序', en: 'Reorder Pages' },
+                desc: { zh: '排序、刪除 PDF 頁面', en: 'Reorder or delete PDF pages' },
+                accept: '.pdf', multiple: false, dropIcon: '🧩',
+                settingsPanel: 'settingsReorder', action: 'startReorder'
+            },
+            pdf2word: {
+                id: 'pdf2word', icon: '📄',
+                title: { zh: 'PDF → Word', en: 'PDF → Word' },
+                desc: { zh: '將 PDF 文字轉換為 .docx', en: 'Convert PDF text to Word (.docx)' },
+                accept: '.pdf', multiple: true, dropIcon: '📋',
+                settingsPanel: 'settingsPDF2Word', action: 'startPDF2Word'
             }
         };
 
@@ -568,7 +700,13 @@
                 footAbout: "關於我們", footFAQ: "常見問題", footHelp: "幫助中心", footContact: "聯絡我們", footTerms: "使用條款", footPrivacy: "私隱政策", footSettings: "私隱設定",
                 btnClose: "關閉", sysRead: "正在讀取：", sysConvert: "正在轉換：", sysZip: "📦 打包 Zip 中...", sysZipWait: "正在壓縮圖片，請稍候...", sysErr: "發生錯誤，請檢查檔案。",
                 cloudTitle: "雲端連接 (沙盒模式)", cloudDesc: "您目前正在嘗試連接 {provider}。<br><br>為保障最高級別的帳戶安全，系統管理員 (Leo Lai) 尚未正式啟用此 API 端點。請暫時使用本地上傳功能。",
-                mergeSuccess: "✅ 合併完成！(已下載)", splitSuccess: "✅ 分割完成！(已下載)", img2pdfSuccess: "✅ 圖片轉 PDF 完成！(已下載)", extractSuccess: "✅ 文字擷取完成！(已下載)", rotateSuccess: "✅ 旋轉完成！(已下載)", compressSuccess: "✅ 壓縮完成！(已下載)"
+                mergeSuccess: "✅ 合併完成！(已下載)", splitSuccess: "✅ 分割完成！(已下載)", img2pdfSuccess: "✅ 圖片轉 PDF 完成！(已下載)", extractSuccess: "✅ 文字擷取完成！(已下載)", rotateSuccess: "✅ 旋轉完成！(已下載)", compressSuccess: "✅ 壓縮完成！(已下載)",
+                splitDeletePages: "刪除指定頁面", extractHtml: "HTML", mergeCompressLabel: "合併後同時壓縮",
+                enablePageNumber: "加入頁碼", pnPosition: "頁碼位置", pnBottomCenter: "底部中間", pnBottomRight: "底部右側", pnBottomLeft: "底部左側", pnTopCenter: "頂部中間", pnFormat: "頁碼格式",
+                enableSignature: "加入簽名", sigClear: "清除重簽", sigBottomRight: "右下角", sigBottomLeft: "左下角", sigTopRight: "右上角", sigCenter: "正中間", sigHint: "用滑鼠在框內簽名",
+                editMetadata: "編輯 Metadata 並儲存", metaTitle: "標題 Title", metaAuthor: "作者 Author", metaSubject: "主題 Subject", metaKeywords: "關鍵字 Keywords", saveMetadataBtn: "💾 儲存 Metadata 並下載 PDF",
+                encUserPwd: "用戶密碼 (開啟文件需輸入)", encOwnerPwd: "擁有者密碼 (管理權限用)", encPermissions: "文件權限：", encPrint: "允許列印", encCopy: "允許複製內容", encModify: "允許修改",
+                reorderHint: "選擇單個 PDF，顯示所有頁面縮圖，使用箭頭排序或點擊 ✕ 刪除。", reorderReset: "⟲ 重置", pdf2wordPageRange: "頁面範圍 (留空=全部)"
             },
             en: {
                 pageTitle: "YouTube Title Studio - PDF Converter", logoText: "PDF2IMG Pro", installApp: "Install App",
@@ -594,7 +732,13 @@
                 footAbout: "About Us", footFAQ: "FAQ", footHelp: "Help", footContact: "Contact", footTerms: "Terms of Use", footPrivacy: "Privacy Policy", footSettings: "Privacy Settings",
                 btnClose: "Close", sysRead: "Reading: ", sysConvert: "Converting: ", sysZip: "📦 Zipping...", sysZipWait: "Compressing, please wait...", sysErr: "An error occurred. Check your file.",
                 cloudTitle: "Cloud Connection (Sandbox)", cloudDesc: "You are attempting to connect to {provider}.<br><br>For maximum account security, the system admin (Leo Lai) has not yet activated this API endpoint. Please use local upload for now.",
-                mergeSuccess: "✅ Merged! (Downloaded)", splitSuccess: "✅ Split! (Downloaded)", img2pdfSuccess: "✅ Images to PDF! (Downloaded)", extractSuccess: "✅ Text Extracted! (Downloaded)", rotateSuccess: "✅ Rotated! (Downloaded)", compressSuccess: "✅ Compressed! (Downloaded)"
+                mergeSuccess: "✅ Merged! (Downloaded)", splitSuccess: "✅ Split! (Downloaded)", img2pdfSuccess: "✅ Images to PDF! (Downloaded)", extractSuccess: "✅ Text Extracted! (Downloaded)", rotateSuccess: "✅ Rotated! (Downloaded)", compressSuccess: "✅ Compressed! (Downloaded)",
+                splitDeletePages: "Delete specified pages", extractHtml: "HTML", mergeCompressLabel: "Also compress after merging",
+                enablePageNumber: "Add page numbers", pnPosition: "Page number position", pnBottomCenter: "Bottom center", pnBottomRight: "Bottom right", pnBottomLeft: "Bottom left", pnTopCenter: "Top center", pnFormat: "Format",
+                enableSignature: "Add signature", sigClear: "Clear", sigBottomRight: "Bottom right", sigBottomLeft: "Bottom left", sigTopRight: "Top right", sigCenter: "Center", sigHint: "Draw your signature in the box",
+                editMetadata: "Edit Metadata and Save", metaTitle: "Title", metaAuthor: "Author", metaSubject: "Subject", metaKeywords: "Keywords", saveMetadataBtn: "💾 Save Metadata & Download PDF",
+                encUserPwd: "User Password (to open file)", encOwnerPwd: "Owner Password (for permissions)", encPermissions: "Permissions:", encPrint: "Allow printing", encCopy: "Allow copying", encModify: "Allow modifying",
+                reorderHint: "Select a single PDF to reorder or delete pages by thumbnail.", reorderReset: "⟲ Reset", pdf2wordPageRange: "Page Range (leave empty for all)"
             }
         };
 
@@ -648,11 +792,60 @@
         // ================= 5. 分割模式開關 =================
         window.toggleSplitMode = function() {
             const isByN = document.getElementById('splitByN').checked;
+            const isDelete = document.getElementById('splitDelete').checked;
             document.getElementById('splitNValue').disabled = !isByN;
-            document.getElementById('splitRanges').disabled = isByN;
+            document.getElementById('splitRanges').disabled = isByN || isDelete;
+            document.getElementById('splitDeleteRange').disabled = !isDelete;
         };
 
-        // ================= 6. 頁面範圍解析工具 =================
+        window.togglePageNumberSettings = function() {
+            const el = document.getElementById('pageNumberSettings');
+            el.classList.toggle('hidden', !document.getElementById('enablePageNumber').checked);
+        };
+
+        window.toggleSignatureSettings = function() {
+            const el = document.getElementById('signatureSettings');
+            el.classList.toggle('hidden', !document.getElementById('enableSignature').checked);
+            if (document.getElementById('enableSignature').checked) initSignaturePad();
+        };
+
+        // ================= 6. 簽名板邏輯 =================
+        let sigCtx = null, sigDrawing = false, sigHasContent = false;
+        function initSignaturePad() {
+            const canvas = document.getElementById('signaturePad');
+            if (!canvas || sigCtx) return;
+            sigCtx = canvas.getContext('2d');
+            sigCtx.fillStyle = '#ffffff';
+            sigCtx.fillRect(0, 0, canvas.width, canvas.height);
+            sigCtx.strokeStyle = '#000000';
+            sigCtx.lineWidth = 2;
+            sigCtx.lineCap = 'round';
+            canvas.addEventListener('mousedown', e => { sigDrawing = true; sigHasContent = true; const p = getSigPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); });
+            canvas.addEventListener('mousemove', e => { if (!sigDrawing) return; const p = getSigPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); });
+            canvas.addEventListener('mouseup', () => { sigDrawing = false; sigCtx.beginPath(); });
+            canvas.addEventListener('mouseleave', () => { sigDrawing = false; sigCtx.beginPath(); });
+            canvas.addEventListener('touchstart', e => { e.preventDefault(); sigDrawing = true; sigHasContent = true; const p = getSigPos(e.touches[0]); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); });
+            canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!sigDrawing) return; const p = getSigPos(e.touches[0]); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); });
+            canvas.addEventListener('touchend', () => { sigDrawing = false; sigCtx.beginPath(); });
+        }
+        function getSigPos(e) { const r = document.getElementById('signaturePad').getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+        window.clearSignature = function() {
+            sigHasContent = false;
+            const canvas = document.getElementById('signaturePad');
+            sigCtx.fillStyle = '#ffffff';
+            sigCtx.fillRect(0, 0, canvas.width, canvas.height);
+        };
+
+        // ================= 7. 頁面排序狀態 =================
+        let reorderPages = [];
+        window.resetReorder = function() {
+            if (reorderPages.length > 0) {
+                reorderPages = Array.from({length: reorderPages.length}, (_, i) => i);
+                renderReorderThumbnails();
+            }
+        };
+
+        // ================= 8. 頁面範圍解析工具 =================
         function parsePageRange(rangeStr, totalPages) {
             if (!rangeStr || !rangeStr.trim()) {
                 const arr = [];
@@ -742,6 +935,9 @@
 
             if (currentMode === 'info') {
                 showPDFInfo();
+            }
+            if (currentMode === 'reorder') {
+                startReorder();
             }
         }
 
@@ -838,6 +1034,19 @@
             const wmText = document.getElementById('wmText').value || 'CONFIDENTIAL';
             const wmOpacity = parseFloat(document.getElementById('wmOpacity').value);
             const wmColor = document.getElementById('wmColor').value;
+            const usePageNumber = document.getElementById('enablePageNumber').checked;
+            const pnPosition = document.getElementById('pnPosition').value;
+            const pnFormat = document.getElementById('pnFormat').value;
+            const useSignature = document.getElementById('enableSignature').checked && sigHasContent;
+            const sigPosition = document.getElementById('sigPosition').value;
+            let sigImage = null;
+            if (useSignature) {
+                const sigCanvas = document.getElementById('signaturePad');
+                const sigBlob = await new Promise(res => sigCanvas.toBlob(res, 'image/png'));
+                sigImage = new Image();
+                sigImage.src = URL.createObjectURL(sigBlob);
+                await new Promise((resolve) => { sigImage.onload = resolve; });
+            }
 
             actionBtn.disabled = true;
             actionBtn.classList.add('breathing');
@@ -904,6 +1113,37 @@
                             ctx.rotate(-25 * Math.PI / 180);
                             ctx.fillText(wmText, 0, 0);
                             ctx.restore();
+                            ctx.globalAlpha = 1;
+                        }
+
+                        // Page number overlay
+                        if (usePageNumber) {
+                            const pnText = pnFormat === '1/N' ? `${pageNum}/${totalPages}` : `${pageNum}`;
+                            ctx.globalAlpha = 0.8;
+                            ctx.fillStyle = '#666666';
+                            ctx.font = `bold ${Math.max(16, canvas.width * 0.025)}px -apple-system, sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            let pnX = canvas.width / 2, pnY = canvas.height - 20;
+                            if (pnPosition === 'bottom-right') { ctx.textAlign = 'right'; pnX = canvas.width - 30; }
+                            else if (pnPosition === 'bottom-left') { ctx.textAlign = 'left'; pnX = 30; }
+                            else if (pnPosition === 'top-center') { ctx.textBaseline = 'top'; pnY = 20; }
+                            ctx.fillText(pnText, pnX, pnY);
+                            ctx.globalAlpha = 1;
+                        }
+
+                        // Signature overlay
+                        if (useSignature && sigImage) {
+                            const sigW = Math.min(sigImage.width, canvas.width * 0.3);
+                            const sigH = sigImage.height * (sigW / sigImage.width);
+                            const margin = 30;
+                            let sx, sy;
+                            if (sigPosition === 'bottom-right') { sx = canvas.width - sigW - margin; sy = canvas.height - sigH - margin - (usePageNumber ? 40 : 0); }
+                            else if (sigPosition === 'bottom-left') { sx = margin; sy = canvas.height - sigH - margin - (usePageNumber ? 40 : 0); }
+                            else if (sigPosition === 'top-right') { sx = canvas.width - sigW - margin; sy = margin; }
+                            else { sx = (canvas.width - sigW) / 2; sy = (canvas.height - sigH) / 2; }
+                            ctx.globalAlpha = 0.7;
+                            ctx.drawImage(sigImage, sx, sy, sigW, sigH);
                             ctx.globalAlpha = 1;
                         }
                         
@@ -1051,7 +1291,12 @@
 
                 progressText.innerText = translations[currentLang].sysZipWait;
                 await yieldThread();
-                const pdfBytes = await mergedDoc.save();
+                if (document.getElementById('mergeCompress').checked) {
+                    // Light compress: remove metadata
+                    mergedDoc.setTitle(''); mergedDoc.setAuthor(''); mergedDoc.setSubject('');
+                    mergedDoc.setKeywords([]); mergedDoc.setProducer(''); mergedDoc.setCreator('');
+                }
+                const pdfBytes = await mergedDoc.save({ useObjectStreams: true });
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 triggerDownload(blob, 'Merged.pdf');
                 setButtonSuccess(translations[currentLang].mergeSuccess);
@@ -1084,58 +1329,76 @@
                 const srcDoc = await PDFDocument.load(buf);
                 const totalPages = srcDoc.getPageCount();
 
-                let ranges = [];
-                if (document.getElementById('splitByN').checked) {
-                    const n = parseInt(document.getElementById('splitNValue').value) || 1;
-                    for (let i = 0; i < totalPages; i += n) {
-                        const end = Math.min(i + n - 1, totalPages - 1);
-                        ranges.push([i, end]);
+                // Delete pages mode: remove specified pages, keep the rest
+                if (document.getElementById('splitDelete').checked) {
+                    const delStr = document.getElementById('splitDeleteRange').value.trim();
+                    const delPages = new Set(parsePageRange(delStr, totalPages));
+                    const keepPages = [];
+                    for (let i = 0; i < totalPages; i++) {
+                        if (!delPages.has(i + 1)) keepPages.push(i);
                     }
+                    if (keepPages.length === 0) {
+                        throw new Error(currentLang === 'zh' ? '不能刪除全部頁面！' : 'Cannot delete all pages!');
+                    }
+                    const subDoc = await PDFDocument.create();
+                    const pages = await subDoc.copyPages(srcDoc, keepPages);
+                    pages.forEach(p => subDoc.addPage(p));
+                    const pdfBytes = await subDoc.save();
+                    triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_cleaned.pdf`);
                 } else {
-                    const rangeStr = document.getElementById('splitRanges').value.trim();
-                    if (!rangeStr) {
-                        for (let i = 0; i < totalPages; i++) ranges.push([i, i]);
+                    let ranges = [];
+                    if (document.getElementById('splitByN').checked) {
+                        const n = parseInt(document.getElementById('splitNValue').value) || 1;
+                        for (let i = 0; i < totalPages; i += n) {
+                            const end = Math.min(i + n - 1, totalPages - 1);
+                            ranges.push([i, end]);
+                        }
                     } else {
-                        const parts = rangeStr.split(',');
-                        for (const part of parts) {
-                            const trimmed = part.trim();
-                            if (trimmed.includes('-')) {
-                                const [s, e] = trimmed.split('-').map(Number);
-                                if (!isNaN(s) && !isNaN(e)) {
-                                    ranges.push([Math.max(1, s) - 1, Math.min(e, totalPages) - 1]);
-                                }
-                            } else {
-                                const n = Number(trimmed);
-                                if (!isNaN(n) && n >= 1 && n <= totalPages) {
-                                    ranges.push([n - 1, n - 1]);
+                        const rangeStr = document.getElementById('splitRanges').value.trim();
+                        if (!rangeStr) {
+                            for (let i = 0; i < totalPages; i++) ranges.push([i, i]);
+                        } else {
+                            const parts = rangeStr.split(',');
+                            for (const part of parts) {
+                                const trimmed = part.trim();
+                                if (trimmed.includes('-')) {
+                                    const [s, e] = trimmed.split('-').map(Number);
+                                    if (!isNaN(s) && !isNaN(e)) {
+                                        ranges.push([Math.max(1, s) - 1, Math.min(e, totalPages) - 1]);
+                                    }
+                                } else {
+                                    const n = Number(trimmed);
+                                    if (!isNaN(n) && n >= 1 && n <= totalPages) {
+                                        ranges.push([n - 1, n - 1]);
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if (ranges.length === 1) {
-                    const subDoc = await PDFDocument.create();
-                    const pages = await subDoc.copyPages(srcDoc, Array.from({length: ranges[0][1] - ranges[0][0] + 1}, (_, i) => ranges[0][0] + i));
-                    pages.forEach(p => subDoc.addPage(p));
-                    const pdfBytes = await subDoc.save();
-                    triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_split_1.pdf`);
-                } else {
-                    const zip = new JSZip();
-                    for (let r = 0; r < ranges.length; r++) {
-                        actionBtnText.innerText = `⟳ ${currentLang==='zh'?'分割':'Splitting'} ${r+1}/${ranges.length}`;
-                        progressText.innerText = `${currentLang==='zh'?'範圍':'Range'} ${ranges[r][0]+1}-${ranges[r][1]+1}`;
-                        await yieldThread();
+                    if (ranges.length === 1) {
                         const subDoc = await PDFDocument.create();
-                        const pages = await subDoc.copyPages(srcDoc, Array.from({length: ranges[r][1] - ranges[r][0] + 1}, (_, i) => ranges[r][0] + i));
+                        const pages = await subDoc.copyPages(srcDoc, Array.from({length: ranges[0][1] - ranges[0][0] + 1}, (_, i) => ranges[0][0] + i));
                         pages.forEach(p => subDoc.addPage(p));
                         const pdfBytes = await subDoc.save();
-                        zip.file(`${baseName}_split_${r+1}.pdf`, pdfBytes);
+                        triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_split_1.pdf`);
+                    } else {
+                        const zip = new JSZip();
+                        for (let r = 0; r < ranges.length; r++) {
+                            actionBtnText.innerText = `⟳ ${currentLang==='zh'?'分割':'Splitting'} ${r+1}/${ranges.length}`;
+                            progressText.innerText = `${currentLang==='zh'?'範圍':'Range'} ${ranges[r][0]+1}-${ranges[r][1]+1}`;
+                            await yieldThread();
+                            const subDoc = await PDFDocument.create();
+                            const pages = await subDoc.copyPages(srcDoc, Array.from({length: ranges[r][1] - ranges[r][0] + 1}, (_, i) => ranges[r][0] + i));
+                            pages.forEach(p => subDoc.addPage(p));
+                            const pdfBytes = await subDoc.save();
+                            zip.file(`${baseName}_split_${r+1}.pdf`, pdfBytes);
+                        }
+                        progressText.innerText = translations[currentLang].sysZipWait;
+                        await yieldThread();
+                        const zipBlob = await zip.generateAsync({ type: "blob" });
+                        triggerDownload(zipBlob, `${baseName}_split.zip`);
                     }
-                    progressText.innerText = translations[currentLang].sysZipWait;
-                    await yieldThread();
-                    const zipBlob = await zip.generateAsync({ type: "blob" });
-                    triggerDownload(zipBlob, `${baseName}_split.zip`);
                 }
 
                 setButtonSuccess(translations[currentLang].splitSuccess);
@@ -1191,11 +1454,18 @@
                     }
                 }
 
-                const output = format === 'json' 
-                    ? JSON.stringify(allResults, null, 2) 
-                    : allResults.join('\n\n');
-                const ext = format === 'json' ? 'json' : 'txt';
-                const mime = format === 'json' ? 'application/json' : 'text/plain';
+                let output, ext, mime;
+                if (format === 'json') {
+                    output = JSON.stringify(allResults, null, 2);
+                    ext = 'json'; mime = 'application/json';
+                } else if (format === 'html') {
+                    const title = selectedFiles[0] ? selectedFiles[0].file.name : 'PDF Extract';
+                    output = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title><style>body{font-family:sans-serif;max-width:800px;margin:40px auto;padding:20px;line-height:1.8}h1{color:#2563eb}p{margin:10px 0}.page-break{page-break-before:always;margin-top:30px;padding-top:20px;border-top:2px dashed #ccc}</style></head><body>${allResults.join('\n<hr class="page-break">\n')}</body></html>`;
+                    ext = 'html'; mime = 'text/html';
+                } else {
+                    output = allResults.join('\n\n');
+                    ext = 'txt'; mime = 'text/plain';
+                }
                 const blob = new Blob([output], { type: mime });
                 triggerDownload(blob, `extracted_text.${ext}`);
                 setButtonSuccess(translations[currentLang].extractSuccess);
@@ -1324,9 +1594,21 @@
                     const thumbCtx = thumbCanvas.getContext('2d');
                     await page.render({ canvasContext: thumbCtx, viewport: thumbViewport }).promise;
                     thumbnailsDiv.appendChild(thumbCanvas);
+
+                    // Store buffer for metadata editing (first file only)
+                    if (f === 0) {
+                        metaSourceBuf = buf;
+                        metaSourceName = fileObj.file.name;
+                        document.getElementById('metaTitle').value = info.Title || '';
+                        document.getElementById('metaAuthor').value = info.Author || '';
+                        document.getElementById('metaSubject').value = info.Subject || '';
+                        document.getElementById('metaKeywords').value = (info.Keywords || '').toString();
+                        document.getElementById('metadataEdit').classList.remove('hidden');
+                    }
                 }
             } catch (error) {
                 resultDiv.innerHTML = `<p class="text-red-500 text-sm">${error.message || translations[currentLang].sysErr}</p>`;
+                document.getElementById('metadataEdit').classList.add('hidden');
             }
         };
 
@@ -1436,10 +1718,238 @@
             }
         };
 
-        // ================= 18. 重置工具 =================
+        // ================= 18. 模式 9: 加密 PDF =================
+        window.startEncrypt = async function() {
+            if (selectedFiles.length === 0) return;
+            const userPwd = document.getElementById('encUserPwd').value.trim();
+            const ownerPwd = document.getElementById('encOwnerPwd').value.trim();
+            if (!userPwd) { alert(currentLang === 'zh' ? '請輸入用戶密碼！' : 'Please enter a user password!'); return; }
+            const allowPrint = document.getElementById('encAllowPrint').checked;
+            const allowCopy = document.getElementById('encAllowCopy').checked;
+            const allowModify = document.getElementById('encAllowModify').checked;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const { PDFDocument } = PDFLib;
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    const baseName = fileObj.file.name.replace(/\.[^/.]+$/, "");
+                    progressText.innerText = `${currentLang==='zh'?'加密中':'Encrypting'}: ${fileObj.file.name.substring(0, 15)}...`;
+                    actionBtnText.innerText = `⟳ ${f+1}/${selectedFiles.length}`;
+                    await yieldThread();
+                    const buf = await readFileAsArrayBuffer(fileObj.file);
+                    const doc = await PDFDocument.load(buf);
+                    doc.encrypt({
+                        userPassword: userPwd,
+                        ownerPassword: ownerPwd || userPwd,
+                        permissions: {
+                            printing: allowPrint ? 'highResolution' : 'none',
+                            copying: allowCopy,
+                            modifying: allowModify
+                        }
+                    });
+                    const pdfBytes = await doc.save();
+                    triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_encrypted.pdf`);
+                }
+                setButtonSuccess('✅ ' + (currentLang === 'zh' ? '加密完成！' : 'Encrypted!'));
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 19. 模式 10: 頁面排序 =================
+        window.startReorder = async function() {
+            if (selectedFiles.length === 0) return;
+            const fileObj = selectedFiles[0];
+            try {
+                const buf = await readFileAsArrayBuffer(fileObj.file);
+                const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                const totalPages = pdf.numPages;
+                reorderPages = Array.from({length: totalPages}, (_, i) => i);
+                renderReorderThumbnails(pdf, buf);
+            } catch (error) {
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+            }
+        };
+
+        async function renderReorderThumbnails(pdfObj, bufOverride) {
+            const container = document.getElementById('reorderThumbnails');
+            container.innerHTML = '<p class="text-sm text-gray-500 text-center col-span-full py-4">' + (currentLang === 'zh' ? '載入頁面縮圖中...' : 'Loading thumbnails...') + '</p>';
+            await yieldThread();
+
+            const pdf = pdfObj || await (async () => {
+                const b = bufOverride || await readFileAsArrayBuffer(selectedFiles[0].file);
+                return await pdfjsLib.getDocument({ data: b }).promise;
+            })();
+
+            container.innerHTML = '';
+            const maxDisplay = Math.min(reorderPages.length, 50);
+            for (let i = 0; i < maxDisplay; i++) {
+                const pageIdx = reorderPages[i];
+                const page = await pdf.getPage(pageIdx + 1);
+                const scale = 0.25;
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width; canvas.height = viewport.height;
+                const ctx = canvas.getContext('2d');
+                await page.render({ canvasContext: ctx, viewport }).promise;
+
+                const card = document.createElement('div');
+                card.className = 'glass-panel bg-gray-50 dark:bg-darkborder border border-gray-200 dark:border-gray-700 p-2 rounded-xl text-center';
+                card.innerHTML = `
+                    <div class="text-xs font-bold text-gray-500 mb-1">${currentLang==='zh'?'第':'P'} ${pageIdx + 1}${currentLang==='zh'?' 頁':''}</div>
+                    <div class="mb-2 flex justify-center">${canvas.outerHTML}</div>
+                    <div class="flex justify-center gap-1">
+                        <button onclick="moveReorderPage(${i}, -1)" class="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded hover:bg-blue-100 transition">▲</button>
+                        <button onclick="moveReorderPage(${i}, 1)" class="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded hover:bg-blue-100 transition">▼</button>
+                        <button onclick="deleteReorderPage(${i})" class="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition">✕</button>
+                    </div>
+                `;
+                container.appendChild(card);
+                await yieldThread();
+            }
+            if (reorderPages.length > 50) {
+                container.innerHTML += `<p class="text-xs text-gray-500 text-center col-span-full">${currentLang==='zh'?'僅顯示首 50 頁，其餘 ':'Showing first 50 of '}${reorderPages.length}${currentLang==='zh'?' 頁':' pages'}</p>`;
+            }
+            actionBtnText.innerText = currentLang === 'zh' ? '💾 儲存排序' : '💾 Save Order';
+            actionBtn.onclick = saveReorder;
+            actionBtn.disabled = false;
+        }
+
+        window.moveReorderPage = function(idx, dir) {
+            const newIdx = idx + dir;
+            if (newIdx < 0 || newIdx >= reorderPages.length) return;
+            [reorderPages[idx], reorderPages[newIdx]] = [reorderPages[newIdx], reorderPages[idx]];
+            renderReorderThumbnails();
+        };
+
+        window.deleteReorderPage = function(idx) {
+            if (reorderPages.length <= 1) {
+                alert(currentLang === 'zh' ? '至少保留一頁！' : 'At least one page must remain!');
+                return;
+            }
+            reorderPages.splice(idx, 1);
+            renderReorderThumbnails();
+        };
+
+        window.saveReorder = async function() {
+            if (reorderPages.length === 0) return;
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+            try {
+                const { PDFDocument } = PDFLib;
+                const fileObj = selectedFiles[0];
+                const baseName = fileObj.file.name.replace(/\.[^/.]+$/, "");
+                progressText.innerText = currentLang === 'zh' ? '正在儲存排序...' : 'Saving reordered PDF...';
+                await yieldThread();
+                const buf = await readFileAsArrayBuffer(fileObj.file);
+                const srcDoc = await PDFDocument.load(buf);
+                const newDoc = await PDFDocument.create();
+                for (const pageIdx of reorderPages) {
+                    const [copied] = await newDoc.copyPages(srcDoc, [pageIdx]);
+                    newDoc.addPage(copied);
+                }
+                const pdfBytes = await newDoc.save();
+                triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_reordered.pdf`);
+                setButtonSuccess('✅ ' + (currentLang === 'zh' ? '排序完成！' : 'Reordered!'));
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 20. 模式 11: PDF → Word =================
+        window.startPDF2Word = async function() {
+            if (selectedFiles.length === 0) return;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const pageRangeStr = document.getElementById('pdf2wordPageRange').value.trim();
+                const allParagraphs = [];
+
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    progressText.innerText = `${translations[currentLang].sysRead} ${fileObj.file.name.substring(0, 15)}...`;
+                    await yieldThread();
+                    const buf = await readFileAsArrayBuffer(fileObj.file);
+                    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                    const pagesToExtract = parsePageRange(pageRangeStr, pdf.numPages);
+
+                    if (selectedFiles.length > 1) {
+                        allParagraphs.push(new docx.Paragraph({ children: [new docx.TextRun({ text: fileObj.file.name, bold: true, size: 28 })] }));
+                    }
+
+                    for (let pi = 0; pi < pagesToExtract.length; pi++) {
+                        const pageNum = pagesToExtract[pi];
+                        actionBtnText.innerText = `⟳ ${currentLang==='zh'?'轉換':'Converting'} ${f+1}/${selectedFiles.length}`;
+                        progressText.innerText = `${currentLang==='zh'?'第 ':''}${pageNum}/${pdf.numPages}${currentLang==='zh'?' 頁':''}`;
+                        await yieldThread();
+                        const page = await pdf.getPage(pageNum);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).filter(s => s.trim()).join(' ');
+                        if (pageText.trim()) {
+                            allParagraphs.push(new docx.Paragraph({ children: [new docx.TextRun({ text: pageText, size: 22 })] }));
+                        }
+                    }
+                }
+
+                const doc = new docx.Document({
+                    sections: [{
+                        properties: {},
+                        children: allParagraphs
+                    }]
+                });
+                const blob = await docx.Packer.toBlob(doc);
+                triggerDownload(blob, 'converted.docx');
+                setButtonSuccess(translations[currentLang].extractSuccess);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 21. 儲存 Metadata =================
+        let metaSourceBuf = null, metaSourceName = '';
+        window.saveMetadata = async function() {
+            if (!metaSourceBuf || selectedFiles.length === 0) return;
+            try {
+                const { PDFDocument } = PDFLib;
+                const doc = await PDFDocument.load(metaSourceBuf);
+                doc.setTitle(document.getElementById('metaTitle').value);
+                doc.setAuthor(document.getElementById('metaAuthor').value);
+                doc.setSubject(document.getElementById('metaSubject').value);
+                doc.setKeywords([document.getElementById('metaKeywords').value || '']);
+                const pdfBytes = await doc.save();
+                triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), metaSourceName.replace(/\.[^/.]+$/, '') + '_meta.pdf');
+                progressText.innerText = currentLang === 'zh' ? 'Metadata 已儲存並下載！' : 'Metadata saved & downloaded!';
+            } catch (error) {
+                progressText.innerText = error.message;
+            }
+        };
+
+        // ================= 22. 重置工具 =================
         window.resetApp = function() {
             selectedFiles = []; finalZipBlob = null;
             selectedFileIndex = -1;
+            reorderPages = [];
             actionBtn.disabled = false; 
             actionBtn.classList.remove('btn-success', 'breathing');
             actionBtn.classList.add('btn-primary');
@@ -1449,6 +1959,9 @@
             if (compressResult) compressResult.classList.add('hidden');
             document.getElementById('pdfInfoResult').innerHTML = '';
             document.getElementById('pdfThumbnails').innerHTML = '';
+            document.getElementById('reorderThumbnails').innerHTML = '';
+            const metaEdit = document.getElementById('metadataEdit');
+            if (metaEdit) metaEdit.classList.add('hidden');
             updateUIState();
         };
         
