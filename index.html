@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="pageTitle">YouTube Title Studio - PDF 專業轉換工具</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { darkbg: '#0a0a0a', darkcard: '#171717', darkborder: '#262626' } } }
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    
+    <style>
+        body { transition: background-color 0.3s, color 0.3s; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .glass-panel { transition: all 0.3s ease; }
+        
+        .btn-primary { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); transition: all 0.3s ease; color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3); }
+        .btn-primary:disabled { background: #475569; transform: none; box-shadow: none; cursor: not-allowed; opacity: 0.7; }
+        
+        .btn-success { background: #16a34a; transition: all 0.3s ease; color: white; box-shadow: 0 10px 20px rgba(22, 163, 74, 0.2); }
+
+        .btn-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); transition: all 0.3s ease; color: white; }
+        .btn-amber:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3); }
+        
+        .breathing { animation: breathe 2s infinite ease-in-out; }
+        @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        .drag-over { border-color: #3b82f6 !important; background-color: rgba(59, 130, 246, 0.05) !important; transform: scale(1.02); }
+        
+        dialog::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+
+        .mode-badge {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white; font-size: 0.75rem; font-weight: 600;
+            padding: 0.25rem 0.75rem; border-radius: 9999px;
+            white-space: nowrap; transition: all 0.3s ease; cursor: pointer;
+        }
+        .mode-badge:hover { box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transform: translateY(-1px); }
+
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover { transform: translateY(-3px); border-color: #3b82f6 !important; }
+        .feature-card.active { border-color: #3b82f6 !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-darkbg dark:text-gray-100 min-h-screen flex flex-col">
+
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-darkbg/80 backdrop-blur-md border-b border-gray-200 dark:border-darkborder">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="text-2xl">📄</span>
+                <span class="font-bold text-lg tracking-tight hidden sm:inline" data-i18n="logoText">PDF2IMG Pro</span>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <span id="modeBadge" class="mode-badge hidden sm:inline-flex" onclick="openFeatureGrid()" title="點擊更換功能">📄 PDF → 圖片</span>
+                <button onclick="openFeatureGrid()" class="btn-amber text-xs sm:text-sm font-bold px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center gap-1" data-i18n="allFeatures">🧩 所有功能</button>
+                
+                <button id="installAppBtn" class="hidden items-center gap-1 text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-3 py-1.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span data-i18n="installApp">下載到電腦</span>
+                </button>
+                
+                <select id="langSwitcher" onchange="changeLanguage(this.value)" class="text-sm bg-transparent border border-gray-300 dark:border-gray-700 rounded-md px-2 py-1 outline-none focus:border-blue-500 cursor-pointer dark:bg-darkcard">
+                    <option value="zh">繁體中文</option>
+                    <option value="en">English</option>
+                </select>
+                
+                <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition" title="切換深淺色">
+                    <span id="themeIconDark" class="hidden">🌙</span>
+                    <span id="themeIconLight">☀️</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center">
+        
+        <div class="mb-10 text-center max-w-2xl">
+            <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4" data-i18n="heroTitle">極速 PDF 轉換工具</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-lg" data-i18n="heroSub">100% 本地瀏覽器運算。保障機密安全，無需上傳至任何伺服器。</p>
+        </div>
+
+        <input type="file" id="fileInput" accept=".pdf" multiple class="hidden" onchange="handleFilesSelected(event)">
+
+        <div class="w-full relative">
+            
+            <div id="dropZone" class="glass-panel bg-white dark:bg-darkcard border-2 border-dashed border-gray-300 dark:border-darkborder rounded-3xl p-8 sm:p-12 text-center transition-all duration-300 shadow-sm cursor-pointer relative mb-8" onclick="document.getElementById('fileInput').click()">
+                <div class="pointer-events-none">
+                    <div class="text-5xl mb-4" id="dropIcon">☁️</div>
+                    <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white" data-i18n="dropTitle">點擊或拖曳 PDF 檔案至此</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6 text-sm" data-i18n="dropDesc">支援批次處理，自動分類資料夾</p>
+                </div>
+                
+                <div class="relative z-20 flex flex-wrap items-center justify-center gap-4 border-t border-gray-200 dark:border-darkborder pt-6 mt-2" onclick="event.stopPropagation()">
+                    <span class="text-sm text-gray-400" data-i18n="orImport">或從雲端匯入：</span>
+                    <button onclick="openCloudModal('Google Drive')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-darkcard">
+                        <img src="https://img.icons8.com/color/48/google-drive--v1.png" class="w-5 h-5" alt="Drive"> Drive
+                    </button>
+                    <button onclick="openCloudModal('Dropbox')" class="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-darkcard">
+                        <img src="https://img.icons8.com/color/48/dropbox.png" class="w-5 h-5" alt="Dropbox"> Dropbox
+                    </button>
+                </div>
+            </div>
+
+            <div id="workspaceContainer" class="hidden opacity-0 transition-opacity duration-500 ease-in-out w-full glass-panel bg-white dark:bg-darkcard border border-gray-200 dark:border-darkborder rounded-3xl p-6 sm:p-8 shadow-lg">
+                
+                <div class="mb-6">
+                    <div class="flex justify-between items-end mb-4 px-1">
+                        <h2 class="text-lg font-bold"><span data-i18n="pendingFiles">待轉換檔案</span> (<span id="fileCount">0</span>)</h2>
+                        <button onclick="openFeatureGrid()" class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline" data-i18n="switchFeature">更換功能</button>
+                    </div>
+                    <div id="fileListContainer" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"></div>
+                </div>
+
+                <!-- ====== 模式 1: PDF → 圖片 ====== -->
+                <div id="settingsPDFtoImage" class="border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="pageRange">頁面範圍 (可留空轉換全部)</label>
+                            <input type="text" id="pageRangeInput" placeholder="例: 1-5, 8, 10-12" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="customWidth">自訂輸出闊度 px (留空=用畫質倍率)</label>
+                            <input type="number" id="customWidthInput" placeholder="例: 1920" min="100" max="8000" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="quality">影像畫質 (無自訂闊度時生效)</label>
+                            <select id="qualitySelect" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                                <option value="1.0" data-i18n="qStandard">1.0x (標準大小)</option>
+                                <option value="2.0" selected data-i18n="qHigh">2.0x (高畫質)</option>
+                                <option value="3.0" data-i18n="qUltra">3.0x (超高清 4K)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="format">輸出格式</label>
+                            <select id="formatSelect" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                                <option value="image/jpeg" selected>JPG (白色背景)</option>
+                                <option value="image/png">PNG (保留透明底)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div class="flex items-center gap-3">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="individualDownload" class="sr-only peer">
+                                <div class="w-10 h-5 bg-gray-300 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="individualDL">逐頁獨立下載 (不打包 ZIP)</span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="pdfPassword">PDF 密碼 (如有加密)</label>
+                            <input type="password" id="pdfPasswordInput" placeholder="••••••" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-200 dark:border-darkborder pt-5 mb-6">
+                        <label class="flex items-center gap-2 cursor-pointer mb-3">
+                            <input type="checkbox" id="enableWatermark" class="rounded" onchange="toggleWatermarkSettings()">
+                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300" data-i18n="enableWatermark">啟用浮水印</span>
+                        </label>
+                        <div id="watermarkSettings" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4 pl-2">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1" data-i18n="wmText">浮水印文字</label>
+                                <input type="text" id="wmText" placeholder="CONFIDENTIAL" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1" data-i18n="wmOpacity">透明度</label>
+                                <select id="wmOpacity" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
+                                    <option value="0.05">5%</option>
+                                    <option value="0.1">10%</option>
+                                    <option value="0.15" selected>15%</option>
+                                    <option value="0.2">20%</option>
+                                    <option value="0.3">30%</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1" data-i18n="wmColor">文字顏色</label>
+                                <select id="wmColor" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
+                                    <option value="#000000" selected>黑色</option>
+                                    <option value="#ffffff">白色</option>
+                                    <option value="#ff0000">紅色</option>
+                                    <option value="#3b82f6">藍色</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 2: 圖片 → PDF ====== -->
+                <div id="settingsImagetoPDF" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="pageSize">頁面大細</label>
+                            <select id="img2pdfPageSize" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                                <option value="a4" selected>A4</option>
+                                <option value="letter">Letter</option>
+                                <option value="original" data-i18n="originalSize">原圖大小</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="orientation">方向</label>
+                            <select id="img2pdfOrient" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                                <option value="portrait" data-i18n="portrait">直向</option>
+                                <option value="landscape" data-i18n="landscape">橫向</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="margin">邊距 (px)</label>
+                            <input type="number" id="img2pdfMargin" value="20" min="0" max="200" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 3: 合併 PDF ====== -->
+                <div id="settingsMerge" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4" data-i18n="mergeHint">選擇多個 PDF 檔案，系統將按列表順序由上至下合併成一個 PDF。</p>
+                    <div class="flex justify-center gap-4 text-sm text-gray-400 mb-2">
+                        <button onclick="moveFileItem(-1)" class="hover:text-blue-500 transition" data-i18n="moveUp">⬆ 上移</button>
+                        <button onclick="moveFileItem(1)" class="hover:text-blue-500 transition" data-i18n="moveDown">⬇ 下移</button>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 4: 分割 PDF ====== -->
+                <div id="settingsSplit" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="flex items-center gap-2 mb-3 cursor-pointer" onclick="document.getElementById('splitByN').checked=true;toggleSplitMode()">
+                                <input type="radio" name="splitMode" id="splitByN" value="everyN" checked onchange="toggleSplitMode()" class="text-blue-600">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="splitEveryN">每 N 頁分割成一個 PDF</span>
+                            </label>
+                            <input type="number" id="splitNValue" value="1" min="1" max="999" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-2 mb-3 cursor-pointer" onclick="document.getElementById('splitByRange').checked=true;toggleSplitMode()">
+                                <input type="radio" name="splitMode" id="splitByRange" value="ranges" onchange="toggleSplitMode()" class="text-blue-600">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300" data-i18n="splitByRange">按頁數範圍分割</span>
+                            </label>
+                            <input type="text" id="splitRanges" placeholder="例: 1-3, 4-6, 7-10" disabled class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm disabled:opacity-50">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 5: 擷取文字 ====== -->
+                <div id="settingsExtractText" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="extractPageRange">頁面範圍 (留空=全部)</label>
+                            <input type="text" id="extractPageRange" placeholder="例: 1-5, 8" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="extractFormat">輸出格式</label>
+                            <select id="extractFormat" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                                <option value="txt" selected>TXT</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 6: 旋轉 PDF ====== -->
+                <div id="settingsRotate" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="rotateAngle">旋轉角度</label>
+                            <select id="rotateAngle" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                                <option value="90" selected>90° (順時針)</option>
+                                <option value="180">180°</option>
+                                <option value="270">270° (逆時針 90°)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="rotatePageRange">頁面範圍 (留空=全部)</label>
+                            <input type="text" id="rotatePageRange" placeholder="例: 1-5, 8" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== 模式 7: PDF 資訊 ====== -->
+                <div id="settingsPDFInfo" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-2" data-i18n="infoHint">選擇 PDF 檔案後自動顯示詳細資訊</p>
+                    <div id="pdfInfoResult" class="space-y-2 text-sm"></div>
+                    <div id="pdfThumbnails" class="flex flex-wrap gap-3 mt-4 justify-center"></div>
+                </div>
+
+                <!-- ====== 模式 8: 壓縮 PDF ====== -->
+                <div id="settingsCompress" class="hidden border-t border-gray-200 dark:border-darkborder pt-6">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2" data-i18n="compressLevel">壓縮級別</label>
+                        <select id="compressLevel" class="w-full bg-gray-50 dark:bg-[#0f0f0f] border border-gray-300 dark:border-gray-700 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors">
+                            <option value="light" data-i18n="compressLight">輕度 (只移除 metadata)</option>
+                            <option value="medium" selected data-i18n="compressMedium">中度 (降質至 80% + 縮小圖片)</option>
+                            <option value="aggressive" data-i18n="compressAggressive">高度 (降質至 50% + 150 DPI)</option>
+                        </select>
+                    </div>
+                    <div id="compressResult" class="hidden text-sm text-center py-2"></div>
+                </div>
+
+                <div class="mt-6">
+                    <button id="actionBtn" onclick="startConversion()" class="btn-primary w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2">
+                        <span id="actionBtnText" data-i18n="btnStart">🚀 開始轉換</span>
+                    </button>
+                    <p id="progressText" class="text-center text-sm text-gray-500 mt-4 h-5"></p>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <section class="w-full bg-white dark:bg-[#0a0a0a] border-t border-gray-200 dark:border-darkborder py-16">
+        <div class="max-w-6xl mx-auto px-4">
+            <h2 class="text-2xl font-bold text-center mb-12" data-i18n="whyChoose">為何選擇我們的工具？</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                <div class="p-6 rounded-2xl bg-gray-50 dark:bg-darkcard">
+                    <div class="text-4xl mb-4">🔒</div>
+                    <h3 class="text-xl font-bold mb-2" data-i18n="feat1Title">軍規級私隱保護</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="feat1Desc">檔案 100% 於您的設備上處理，絕不觸碰雲端伺服器，完美符合商業機密及 NDA 要求。</p>
+                </div>
+                <div class="p-6 rounded-2xl bg-gray-50 dark:bg-darkcard">
+                    <div class="text-4xl mb-4">📐</div>
+                    <h3 class="text-xl font-bold mb-2" data-i18n="feat2Title">支援超高解析度</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="feat2Desc">高達 3.0x 的無損渲染技術，無論是細緻的 CAD 建築圖則還是高清海報，細節依然銳利清晰。</p>
+                </div>
+                <div class="p-6 rounded-2xl bg-gray-50 dark:bg-darkcard">
+                    <div class="text-4xl mb-4">⚡</div>
+                    <h3 class="text-xl font-bold mb-2" data-i18n="feat3Title">智能批次引擎</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="feat3Desc">拖曳多份文件，一鍵全部轉換。系統會自動為您分類資料夾並打包成一個整潔的 ZIP 檔。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="w-full bg-gray-100 dark:bg-[#050505] py-12 border-t border-gray-200 dark:border-darkborder">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm font-medium text-gray-500 dark:text-gray-400 mb-8">
+                <button onclick="openModal('about')" class="hover:text-blue-500 transition" data-i18n="footAbout">關於我們</button>
+                <button onclick="openModal('faq')" class="hover:text-blue-500 transition" data-i18n="footFAQ">常見問題</button>
+                <button onclick="openModal('help')" class="hover:text-blue-500 transition" data-i18n="footHelp">幫助中心</button>
+                <button onclick="openModal('contact')" class="hover:text-blue-500 transition" data-i18n="footContact">聯絡我們</button>
+                <button onclick="openModal('terms')" class="hover:text-blue-500 transition" data-i18n="footTerms">使用條款</button>
+                <button onclick="openModal('privacy')" class="hover:text-blue-500 transition" data-i18n="footPrivacy">私隱政策</button>
+                <button onclick="openModal('settings')" class="hover:text-blue-500 transition" data-i18n="footSettings">私隱設定</button>
+            </div>
+            <div class="text-center text-xs text-gray-400 dark:text-gray-600">
+                <p>&copy; 2026 YouTube Title Studio. All rights reserved.</p>
+                <p class="mt-2 text-gray-400 dark:text-gray-500 font-medium">Develop by Leo Lai v2.0.0</p>
+            </div>
+        </div>
+    </footer>
+
+    <dialog id="infoModal" class="bg-white dark:bg-darkcard rounded-2xl shadow-2xl p-0 w-[90%] max-w-2xl border border-gray-200 dark:border-darkborder text-gray-900 dark:text-gray-100 backdrop:bg-black/60">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-darkborder">
+            <h3 id="modalTitle" class="text-xl font-bold">標題</h3>
+            <button onclick="document.getElementById('infoModal').close()" class="text-gray-400 hover:text-red-500 text-3xl leading-none">&times;</button>
+        </div>
+        <div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto text-sm leading-relaxed text-gray-600 dark:text-gray-300 space-y-4 custom-scrollbar">
+            內容
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-darkborder text-right bg-gray-50 dark:bg-[#0f0f0f] rounded-b-2xl">
+            <button onclick="document.getElementById('infoModal').close()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition" data-i18n="btnClose">關閉</button>
+        </div>
+    </dialog>
+
+    <dialog id="featureGridModal" class="bg-white dark:bg-darkcard rounded-2xl shadow-2xl p-0 w-[95%] max-w-3xl border border-gray-200 dark:border-darkborder text-gray-900 dark:text-gray-100 backdrop:bg-black/60">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-darkborder">
+            <h3 class="text-xl font-bold" data-i18n="allFeaturesTitle">🧩 所有功能</h3>
+            <button onclick="closeFeatureGrid()" class="text-gray-400 hover:text-red-500 text-3xl leading-none">&times;</button>
+        </div>
+        <div id="featureGridItems" class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[65vh] overflow-y-auto custom-scrollbar">
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-darkborder text-right bg-gray-50 dark:bg-[#0f0f0f] rounded-b-2xl">
+            <button onclick="closeFeatureGrid()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition" data-i18n="btnClose">關閉</button>
+        </div>
+    </dialog>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // ================= 0. 功能模式配置表 =================
+        const FEATURE_MODES = {
+            pdf2img: {
+                id: 'pdf2img', icon: '📄',
+                title: { zh: 'PDF → 圖片', en: 'PDF → Image' },
+                desc: { zh: '將 PDF 每頁轉換為 JPG/PNG 圖片', en: 'Convert PDF pages to JPG/PNG images' },
+                accept: '.pdf', multiple: true, dropIcon: '☁️',
+                settingsPanel: 'settingsPDFtoImage', action: 'startConversion'
+            },
+            img2pdf: {
+                id: 'img2pdf', icon: '🖼️',
+                title: { zh: '圖片 → PDF', en: 'Image → PDF' },
+                desc: { zh: '將多張圖片合成一個 PDF 文件', en: 'Combine multiple images into one PDF' },
+                accept: '.jpg,.jpeg,.png,.webp', multiple: true, dropIcon: '🏞️',
+                settingsPanel: 'settingsImagetoPDF', action: 'startImageToPDF'
+            },
+            merge: {
+                id: 'merge', icon: '🔗',
+                title: { zh: '合併 PDF', en: 'Merge PDF' },
+                desc: { zh: '將多個 PDF 合併成一個文件', en: 'Merge multiple PDFs into one' },
+                accept: '.pdf', multiple: true, dropIcon: '📚',
+                settingsPanel: 'settingsMerge', action: 'startMerge'
+            },
+            split: {
+                id: 'split', icon: '✂️',
+                title: { zh: '分割 PDF', en: 'Split PDF' },
+                desc: { zh: '將 PDF 按頁數分割成多個文件', en: 'Split PDF into multiple files by pages' },
+                accept: '.pdf', multiple: false, dropIcon: '📑',
+                settingsPanel: 'settingsSplit', action: 'startSplit'
+            },
+            extract: {
+                id: 'extract', icon: '📝',
+                title: { zh: '擷取文字', en: 'Extract Text' },
+                desc: { zh: '從 PDF 中擷取文字內容', en: 'Extract text content from PDF' },
+                accept: '.pdf', multiple: true, dropIcon: '📋',
+                settingsPanel: 'settingsExtractText', action: 'startExtractText'
+            },
+            rotate: {
+                id: 'rotate', icon: '🔄',
+                title: { zh: '旋轉 PDF', en: 'Rotate PDF' },
+                desc: { zh: '旋轉 PDF 頁面方向', en: 'Rotate PDF page orientation' },
+                accept: '.pdf', multiple: true, dropIcon: '🔃',
+                settingsPanel: 'settingsRotate', action: 'startRotate'
+            },
+            info: {
+                id: 'info', icon: 'ℹ️',
+                title: { zh: 'PDF 資訊', en: 'PDF Info' },
+                desc: { zh: '檢視 PDF 詳細資訊與頁面縮圖', en: 'View PDF details and page thumbnails' },
+                accept: '.pdf', multiple: true, dropIcon: '📊',
+                settingsPanel: 'settingsPDFInfo', action: 'showPDFInfo'
+            },
+            compress: {
+                id: 'compress', icon: '🗜️',
+                title: { zh: '壓縮 PDF', en: 'Compress PDF' },
+                desc: { zh: '縮小 PDF 檔案大小', en: 'Reduce PDF file size' },
+                accept: '.pdf', multiple: true, dropIcon: '📦',
+                settingsPanel: 'settingsCompress', action: 'startCompress'
+            }
+        };
+
+        let currentMode = 'pdf2img';
+        let selectedFiles = [];
+        let finalZipBlob = null;
+
+        const workspaceContainer = document.getElementById('workspaceContainer');
+        const dropZone = document.getElementById('dropZone');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const actionBtn = document.getElementById('actionBtn');
+        const actionBtnText = document.getElementById('actionBtnText');
+        const progressText = document.getElementById('progressText');
+        const dropIcon = document.getElementById('dropIcon');
+        const modeBadge = document.getElementById('modeBadge');
+        const fileInput = document.getElementById('fileInput');
+
+        // ================= 1. 模式切換邏輯 =================
+        window.selectMode = function(modeId) {
+            if (!FEATURE_MODES[modeId]) return;
+            currentMode = modeId;
+            const mode = FEATURE_MODES[modeId];
+
+            modeBadge.innerHTML = `${mode.icon} ${mode.title[currentLang]}`;
+            if (!modeBadge.classList.contains('sm:inline-flex')) modeBadge.classList.add('sm:inline-flex');
+
+            fileInput.accept = mode.accept;
+            fileInput.multiple = mode.multiple;
+
+            dropIcon.innerText = mode.dropIcon;
+
+            document.querySelectorAll('[id^="settings"]').forEach(p => p.classList.add('hidden'));
+            const panel = document.getElementById(mode.settingsPanel);
+            if (panel) panel.classList.remove('hidden');
+
+            actionBtn.onclick = typeof window[mode.action] === 'function' ? window[mode.action] : null;
+            actionBtn.className = 'btn-primary w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2';
+            actionBtn.disabled = false;
+            actionBtnText.innerText = translations[currentLang].btnStart || '🚀 開始';
+            progressText.innerText = '';
+
+            selectedFiles = [];
+            fileInput.value = '';
+            updateUIState();
+
+            document.getElementById('featureGridModal').close();
+        };
+
+        window.openFeatureGrid = function() {
+            const grid = document.getElementById('featureGridItems');
+            grid.innerHTML = '';
+            Object.values(FEATURE_MODES).forEach(mode => {
+                const card = document.createElement('div');
+                card.className = 'feature-card glass-panel bg-white dark:bg-darkcard border-2 border-gray-200 dark:border-darkborder p-4 rounded-xl cursor-pointer transition-all duration-300 shadow-sm';
+                if (mode.id === currentMode) card.classList.add('active', 'border-blue-500');
+                card.onclick = () => selectMode(mode.id);
+                card.innerHTML = `
+                    <div class="text-3xl mb-2">${mode.icon}</div>
+                    <h4 class="font-bold text-sm">${mode.title[currentLang]}</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${mode.desc[currentLang]}</p>
+                    <div class="mt-3">
+                        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full ${mode.id === currentMode ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}" data-i18n="useFeature">使用此功能</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            document.getElementById('featureGridModal').showModal();
+        };
+
+        window.closeFeatureGrid = function() {
+            document.getElementById('featureGridModal').close();
+        };
+
+        // ================= 2. 深淺色模式邏輯 =================
+        const htmlEl = document.documentElement;
+        const themeIconDark = document.getElementById('themeIconDark');
+        const themeIconLight = document.getElementById('themeIconLight');
+
+        let savedTheme = localStorage.getItem('app_theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlEl.classList.add('dark'); themeIconLight.classList.remove('hidden'); themeIconDark.classList.add('hidden');
+        } else {
+            htmlEl.classList.remove('dark'); themeIconLight.classList.add('hidden'); themeIconDark.classList.remove('hidden');
+        }
+
+        window.toggleTheme = function() {
+            htmlEl.classList.toggle('dark');
+            const isDark = htmlEl.classList.contains('dark');
+            localStorage.setItem('app_theme', isDark ? 'dark' : 'light');
+            themeIconLight.classList.toggle('hidden', !isDark);
+            themeIconDark.classList.toggle('hidden', isDark);
+        };
+
+        // ================= 3. 語言系統邏輯 =================
+        const translations = {
+            zh: {
+                pageTitle: "YouTube Title Studio - PDF 專業轉換工具", logoText: "PDF2IMG Pro", installApp: "下載到電腦",
+                allFeatures: "🧩 所有功能", allFeaturesTitle: "🧩 所有功能", switchFeature: "更換功能", useFeature: "使用此功能",
+                heroTitle: "極速 PDF 轉換工具", heroSub: "100% 本地瀏覽器運算。保障機密安全，無需上傳至任何伺服器。",
+                dropTitle: "點擊或拖曳檔案至此", dropDesc: "支援批次處理，自動分類資料夾", orImport: "或從雲端匯入：",
+                pendingFiles: "待轉換檔案", settings: "轉換設定",
+                pageRange: "頁面範圍 (可留空轉換全部)", customWidth: "自訂輸出闊度 px (留空=用畫質倍率)",
+                quality: "影像畫質 (無自訂闊度時生效)", qStandard: "1.0x (標準大小)", qHigh: "2.0x (高畫質)", qUltra: "3.0x (超高清 4K)",
+                format: "輸出格式", individualDL: "逐頁獨立下載 (不打包 ZIP)", pdfPassword: "PDF 密碼 (如有加密)",
+                enableWatermark: "啟用浮水印", wmText: "浮水印文字", wmOpacity: "透明度", wmColor: "文字顏色",
+                pageSize: "頁面大細", originalSize: "原圖大小", orientation: "方向", portrait: "直向", landscape: "橫向", margin: "邊距 (px)",
+                mergeHint: "選擇多個 PDF 檔案，系統將按列表順序由上至下合併成一個 PDF。", moveUp: "⬆ 上移", moveDown: "⬇ 下移",
+                splitEveryN: "每 N 頁分割成一個 PDF", splitByRange: "按頁數範圍分割",
+                extractPageRange: "頁面範圍 (留空=全部)", extractFormat: "輸出格式",
+                rotateAngle: "旋轉角度", rotatePageRange: "頁面範圍 (留空=全部)",
+                infoHint: "選擇 PDF 檔案後自動顯示詳細資訊",
+                compressLevel: "壓縮級別", compressLight: "輕度 (只移除 metadata)", compressMedium: "中度 (降質至 80% + 縮小圖片)", compressAggressive: "高度 (降質至 50% + 150 DPI)",
+                btnStart: "🚀 開始轉換", successBtn: "✅ 轉換完成！(已下載)",
+                whyChoose: "為何選擇我們的工具？", feat1Title: "軍規級私隱保護", feat1Desc: "檔案 100% 於您的設備上處理，絕不觸碰雲端伺服器，完美符合商業機密及 NDA 要求。",
+                feat2Title: "支援超高解析度", feat2Desc: "文件可高達 3.0x 渲染；圖片支援自訂頁面大細，無論 CAD 圖則定係高清海報都清晰銳利。",
+                feat3Title: "一站式工具箱", feat3Desc: "一個工具包辦轉換、合併、分割、擷取文字、旋轉、壓縮，無需安裝任何軟件。",
+                footAbout: "關於我們", footFAQ: "常見問題", footHelp: "幫助中心", footContact: "聯絡我們", footTerms: "使用條款", footPrivacy: "私隱政策", footSettings: "私隱設定",
+                btnClose: "關閉", sysRead: "正在讀取：", sysConvert: "正在轉換：", sysZip: "📦 打包 Zip 中...", sysZipWait: "正在壓縮圖片，請稍候...", sysErr: "發生錯誤，請檢查檔案。",
+                cloudTitle: "雲端連接 (沙盒模式)", cloudDesc: "您目前正在嘗試連接 {provider}。<br><br>為保障最高級別的帳戶安全，系統管理員 (Leo Lai) 尚未正式啟用此 API 端點。請暫時使用本地上傳功能。",
+                mergeSuccess: "✅ 合併完成！(已下載)", splitSuccess: "✅ 分割完成！(已下載)", img2pdfSuccess: "✅ 圖片轉 PDF 完成！(已下載)", extractSuccess: "✅ 文字擷取完成！(已下載)", rotateSuccess: "✅ 旋轉完成！(已下載)", compressSuccess: "✅ 壓縮完成！(已下載)"
+            },
+            en: {
+                pageTitle: "YouTube Title Studio - PDF Converter", logoText: "PDF2IMG Pro", installApp: "Install App",
+                allFeatures: "🧩 All Features", allFeaturesTitle: "🧩 All Features", switchFeature: "Switch Feature", useFeature: "Use",
+                heroTitle: "Lightning Fast PDF Converter", heroSub: "100% Local processing. Bank-grade security with no server uploads.",
+                dropTitle: "Click or Drag Files Here", dropDesc: "Supports batch processing & auto-folder sorting", orImport: "Or import from:",
+                pendingFiles: "Pending Files", settings: "Conversion Settings",
+                pageRange: "Page Range (leave empty for all)", customWidth: "Custom Width px (empty=use scale)",
+                quality: "Image Quality (when no custom width)", qStandard: "1.0x (Standard)", qHigh: "2.0x (High Quality)", qUltra: "3.0x (Ultra HD 4K)",
+                format: "Output Format", individualDL: "Download individually (no ZIP)", pdfPassword: "PDF Password (if encrypted)",
+                enableWatermark: "Enable Watermark", wmText: "Watermark Text", wmOpacity: "Opacity", wmColor: "Text Color",
+                pageSize: "Page Size", originalSize: "Original Size", orientation: "Orientation", portrait: "Portrait", landscape: "Landscape", margin: "Margin (px)",
+                mergeHint: "Select multiple PDFs. They will be merged top-to-bottom in list order.", moveUp: "⬆ Move Up", moveDown: "⬇ Move Down",
+                splitEveryN: "Split every N pages", splitByRange: "Split by page ranges",
+                extractPageRange: "Page Range (leave empty for all)", extractFormat: "Output Format",
+                rotateAngle: "Rotation Angle", rotatePageRange: "Page Range (leave empty for all)",
+                infoHint: "Select PDF files to view detailed information",
+                compressLevel: "Compression Level", compressLight: "Light (remove metadata only)", compressMedium: "Medium (80% quality + resize)", compressAggressive: "Aggressive (50% quality + 150 DPI)",
+                btnStart: "🚀 Start Conversion", successBtn: "✅ Complete! (Downloaded)",
+                whyChoose: "Why Choose Us?", feat1Title: "Military-Grade Privacy", feat1Desc: "Files are processed 100% locally on your device. Zero server uploads, fully compliant with NDA requirements.",
+                feat2Title: "Ultra High Resolution", feat2Desc: "Up to 3.0x rendering for PDFs. Custom page sizes for images. Perfect for detailed CAD drawings and HD posters.",
+                feat3Title: "All-in-One Toolkit", feat3Desc: "Convert, merge, split, extract text, rotate, and compress PDFs — all in one tool, no software install required.",
+                footAbout: "About Us", footFAQ: "FAQ", footHelp: "Help", footContact: "Contact", footTerms: "Terms of Use", footPrivacy: "Privacy Policy", footSettings: "Privacy Settings",
+                btnClose: "Close", sysRead: "Reading: ", sysConvert: "Converting: ", sysZip: "📦 Zipping...", sysZipWait: "Compressing, please wait...", sysErr: "An error occurred. Check your file.",
+                cloudTitle: "Cloud Connection (Sandbox)", cloudDesc: "You are attempting to connect to {provider}.<br><br>For maximum account security, the system admin (Leo Lai) has not yet activated this API endpoint. Please use local upload for now.",
+                mergeSuccess: "✅ Merged! (Downloaded)", splitSuccess: "✅ Split! (Downloaded)", img2pdfSuccess: "✅ Images to PDF! (Downloaded)", extractSuccess: "✅ Text Extracted! (Downloaded)", rotateSuccess: "✅ Rotated! (Downloaded)", compressSuccess: "✅ Compressed! (Downloaded)"
+            }
+        };
+
+        const modalContents = {
+            about: { zh: "<p class='font-bold mb-2 text-lg'>歡迎來到 PDF2IMG Pro</p><p>我們是由 Leo Lai 開發的專業工具團隊。有感於市面上許多線上 PDF 工具充斥廣告且存在嚴重的檔案外洩風險，我們致力於利用純前端 WebAssembly 技術，為專業人士（如工程師、設計師）打造 100% 本地端運算的一站式 PDF 工具箱。</p>", en: "<p class='font-bold mb-2 text-lg'>Welcome to PDF2IMG Pro</p><p>Developed by Leo Lai, we aim to provide professionals with one 100% local, frontend-based PDF toolkit to eliminate privacy risks common in other online converters.</p>" },
+            faq: { zh: "<p class='font-bold text-blue-500'>Q: 我的 PDF 檔案會被上傳到伺服器嗎？</p><p class='mb-4'>A: 絕對不會。本工具的運算核心 (PDF.js, pdf-lib) 運行於您的瀏覽器內存中，斷網狀態下依然可以運作。</p><p class='font-bold text-blue-500'>Q: 支援哪些功能？</p><p>A: 點擊頂部的「所有功能」按鈕即可查看完整工具箱：PDF 轉圖片、圖片轉 PDF、合併、分割、擷取文字、旋轉、檢視資訊、壓縮等。</p>", en: "<p class='font-bold text-blue-500'>Q: Are my PDFs uploaded?</p><p class='mb-4'>A: Never. Processing happens entirely in your browser's memory (PDF.js + pdf-lib).</p><p class='font-bold text-blue-500'>Q: What features are supported?</p><p>A: Click the 'All Features' button at the top to see the full toolkit: PDF→Image, Image→PDF, Merge, Split, Extract Text, Rotate, Info, Compress, and more.</p>" },
+            privacy: { zh: "<p class='font-bold text-xl mb-4 text-blue-500'>最高機密保護聲明</p><p class='mb-2'>1. <b>零數據收集：</b> 我們不追蹤、不讀取、不備份您的任何文件內容。</p><p class='mb-2'>2. <b>記憶體揮發：</b> 轉換完成並關閉網頁後，所有的暫存圖像數據將會從您的設備記憶體中徹底抹除。</p><p>3. <b>無 Cookie 追蹤：</b> 本站僅使用 LocalStorage 記錄您的深淺色與語言偏好。</p>", en: "<p class='font-bold text-xl mb-4 text-blue-500'>Ultimate Privacy Statement</p><p class='mb-2'>1. <b>Zero Data Collection:</b> We do not track or back up your files.</p><p class='mb-2'>2. <b>Volatile Memory:</b> All cached images are erased from your RAM once you close the page.</p><p>3. <b>No Tracking Cookies:</b> We only save your theme and language preferences locally.</p>" },
+            terms: { zh: "<p class='mb-4'>1. <b>合法用途：</b> 使用者必須保證上傳之文件不違反當地版權法例。</p><p>2. <b>免責聲明：</b> 本工具「按原樣」提供。對於因瀏覽器崩潰或記憶體不足而導致的任何進度遺失，開發者恕不負責。</p>", en: "<p class='mb-4'>1. <b>Legal Use:</b> Users must ensure processed files do not violate copyright laws.</p><p>2. <b>Disclaimer:</b> Provided 'as is'. We are not responsible for lost progress due to browser crashes or memory limits.</p>" },
+            help: { zh: "<p class='font-bold mb-2'>遇到問題？請嘗試以下步驟：</p><p class='mb-2'>1. 確保您的 PDF 沒有密碼保護（如有密碼，可在 PDF→圖片 模式輸入）。</p><p class='mb-2'>2. 如果文件頁數超過 100 頁，請嘗試降低「影像畫質」至 1.0x 以防記憶體不足。</p><p class='mb-2'>3. 壓縮模式「高度」級別會將所有頁面重新渲染，大檔案可能需要較長時間。</p><p>4. 更新您的瀏覽器至最新版本 (推薦使用 Google Chrome 或 Microsoft Edge)。</p>", en: "<p class='font-bold mb-2'>Having issues? Try this:</p><p class='mb-2'>1. If your PDF is password-protected, enter the password in PDF→Image mode.</p><p class='mb-2'>2. For PDFs > 100 pages, lower quality to 1.0x to save memory.</p><p class='mb-2'>3. Aggressive compression re-renders all pages and may take longer for large files.</p><p>4. Update your browser (Chrome/Edge recommended).</p>" },
+            contact: { zh: "<p class='mb-4'>如需商務合作、API 授權或系統除錯，請聯絡開發者：</p><p class='mb-2'><b>技術負責人：</b> Leo Lai</p><p><b>專案名稱：</b> YouTube Title Studio 附屬套件</p>", en: "<p class='mb-4'>For business inquiries, API licensing, or debugging:</p><p class='mb-2'><b>Lead Developer:</b> Leo Lai</p><p><b>Project:</b> YouTube Title Studio Utilities</p>" },
+            settings: { zh: "<div class='text-center py-6'><p class='text-7xl mb-4'>🛡️</p><p class='text-lg leading-relaxed'>因為我們堅持 <b>零追蹤、零上傳、零廣告</b> 的最高原則，<br>所以您不需要進行任何複雜的私隱設定撤銷。<br><br><span class='font-bold text-blue-500'>您的資料，永遠屬於您。</span></p></div>", en: "<div class='text-center py-6'><p class='text-7xl mb-4'>🛡️</p><p class='text-lg leading-relaxed'>Because we strictly follow a <b>Zero-Tracking, Zero-Upload</b> policy,<br>there are no complicated privacy settings to manage here.<br><br><span class='font-bold text-blue-500'>Your data remains yours.</span></p></div>" }
+        };
+
+        let currentLang = localStorage.getItem('app_lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
+        document.getElementById('langSwitcher').value = currentLang;
+
+        window.changeLanguage = function(lang) {
+            currentLang = lang;
+            localStorage.setItem('app_lang', lang);
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) el.innerText = translations[lang][key];
+            });
+            if (selectedFiles.length > 0) renderFileList();
+            const mode = FEATURE_MODES[currentMode];
+            if (mode) modeBadge.innerHTML = `${mode.icon} ${mode.title[currentLang]}`;
+        };
+        changeLanguage(currentLang);
+
+        window.openModal = function(type) {
+            const modal = document.getElementById('infoModal');
+            const titleKey = 'foot' + type.charAt(0).toUpperCase() + type.slice(1);
+            document.getElementById('modalTitle').innerText = translations[currentLang][titleKey] || '';
+            document.getElementById('modalContent').innerHTML = modalContents[type][currentLang];
+            modal.showModal();
+        };
+
+        window.openCloudModal = function(provider) {
+            const modal = document.getElementById('infoModal');
+            document.getElementById('modalTitle').innerText = translations[currentLang]['cloudTitle'];
+            document.getElementById('modalContent').innerHTML = `<div class="text-center p-8"><img src="https://img.icons8.com/color/96/${provider.toLowerCase().replace(' ', '-')}.png" class="mx-auto mb-6"><p class="text-lg leading-relaxed">${translations[currentLang]['cloudDesc'].replace('{provider}', provider)}</p></div>`;
+            modal.showModal();
+        };
+
+        // ================= 4. 浮水印開關 =================
+        window.toggleWatermarkSettings = function() {
+            const el = document.getElementById('watermarkSettings');
+            el.classList.toggle('hidden', !document.getElementById('enableWatermark').checked);
+        };
+
+        // ================= 5. 分割模式開關 =================
+        window.toggleSplitMode = function() {
+            const isByN = document.getElementById('splitByN').checked;
+            document.getElementById('splitNValue').disabled = !isByN;
+            document.getElementById('splitRanges').disabled = isByN;
+        };
+
+        // ================= 6. 頁面範圍解析工具 =================
+        function parsePageRange(rangeStr, totalPages) {
+            if (!rangeStr || !rangeStr.trim()) {
+                const arr = [];
+                for (let i = 1; i <= totalPages; i++) arr.push(i);
+                return arr;
+            }
+            const pages = new Set();
+            const parts = rangeStr.split(',');
+            for (const part of parts) {
+                const trimmed = part.trim();
+                if (trimmed.includes('-')) {
+                    const [start, end] = trimmed.split('-').map(Number);
+                    if (!isNaN(start) && !isNaN(end)) {
+                        for (let i = Math.max(1, start); i <= Math.min(end, totalPages); i++) pages.add(i);
+                    }
+                } else {
+                    const num = Number(trimmed);
+                    if (!isNaN(num) && num >= 1 && num <= totalPages) pages.add(num);
+                }
+            }
+            const result = Array.from(pages).sort((a, b) => a - b);
+            return result.length > 0 ? result : (() => { for (let i = 1; i <= totalPages; i++) result.push(i); return result; })();
+        }
+
+        // ================= 7. 合併模式排序工具 =================
+        let selectedFileIndex = -1;
+        window.moveFileItem = function(direction) {
+            if (selectedFiles.length < 2) return;
+            const listItems = fileListContainer.querySelectorAll('.file-item');
+            const selected = fileListContainer.querySelector('.file-item.selected');
+            let idx = selected ? Array.from(listItems).indexOf(selected) : -1;
+            if (idx === -1) idx = 0;
+            const newIdx = idx + direction;
+            if (newIdx < 0 || newIdx >= selectedFiles.length) return;
+            [selectedFiles[idx], selectedFiles[newIdx]] = [selectedFiles[newIdx], selectedFiles[idx]];
+            selectedFileIndex = newIdx;
+            renderFileList();
+        };
+
+        // ================= 8. 拖曳與選擇邏輯 =================
+        window.addEventListener('dragover', e => e.preventDefault(), false);
+        window.addEventListener('drop', e => e.preventDefault(), false);
+
+        dropZone.addEventListener('dragenter', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleNewFiles(e.dataTransfer.files);
+        });
+
+        window.handleFilesSelected = function(e) { 
+            handleNewFiles(e.target.files); 
+            e.target.value = ""; 
+        };
+
+        function getValidExtensions(acceptStr) {
+            return acceptStr.split(',').map(s => s.trim().toLowerCase());
+        }
+
+        function handleNewFiles(fileList) {
+            const mode = FEATURE_MODES[currentMode];
+            const validExts = getValidExtensions(mode.accept);
+            let validFiles = Array.from(fileList).filter(f => {
+                const name = f.name.toLowerCase();
+                return validExts.some(ext => name.endsWith(ext.replace('.', '')) || 
+                    (ext === '.jpg' && (name.endsWith('jpg') || name.endsWith('jpeg'))) ||
+                    (ext === '.jpeg' && (name.endsWith('jpeg') || name.endsWith('jpg'))));
+            });
+
+            if (validFiles.length === 0) {
+                const extsLabel = validExts.join(', ');
+                alert(currentLang === 'zh' ? `請只選擇 ${extsLabel} 檔案！` : `Please select ${extsLabel} files only!`);
+                return;
+            }
+
+            if (!mode.multiple) {
+                validFiles = [validFiles[0]];
+                selectedFiles = [];
+            }
+
+            const newFileObjs = validFiles.map(f => ({ id: Date.now() + Math.random(), file: f }));
+            selectedFiles = [...selectedFiles, ...newFileObjs];
+            selectedFileIndex = -1;
+            updateUIState();
+
+            if (currentMode === 'info') {
+                showPDFInfo();
+            }
+        }
+
+        function getAcceptForMode() {
+            return FEATURE_MODES[currentMode].accept;
+        }
+
+        function updateUIState() {
+            if (selectedFiles.length === 0) {
+                workspaceContainer.classList.add('hidden', 'opacity-0');
+            } else {
+                document.getElementById('fileCount').innerText = selectedFiles.length;
+                renderFileList();
+                workspaceContainer.classList.remove('hidden');
+                setTimeout(() => workspaceContainer.classList.remove('opacity-0'), 10);
+            }
+        }
+
+        function renderFileList() {
+            fileListContainer.innerHTML = '';
+            const isMerge = currentMode === 'merge';
+            selectedFiles.forEach((item, index) => {
+                const sizeMB = (item.file.size / (1024 * 1024)).toFixed(1);
+                const card = document.createElement('div');
+                const selectedClass = (isMerge && index === selectedFileIndex) ? ' ring-2 ring-blue-400 dark:ring-blue-500' : '';
+                card.className = `glass-panel bg-gray-50 dark:bg-darkborder border border-gray-200 dark:border-gray-700 p-3 rounded-xl shadow-sm flex items-center justify-between file-item${selectedClass}`;
+                card.onclick = function(e) {
+                    if (isMerge && e.target.tagName !== 'BUTTON') {
+                        selectedFileIndex = index;
+                        renderFileList();
+                    }
+                };
+                card.innerHTML = `
+                    <div class="flex items-center gap-4 overflow-hidden">
+                        <div class="text-2xl bg-gray-200 dark:bg-gray-800 p-2 rounded-lg leading-none">${currentMode === 'img2pdf' ? '🖼️' : '📄'}</div>
+                        <div class="truncate">
+                            <p class="font-bold truncate text-sm" title="${item.file.name}">${item.file.name}</p>
+                            <p class="text-xs text-gray-500">${sizeMB} MB</p>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index}); event.stopPropagation();" class="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition" title="Remove">✕</button>
+                `;
+                fileListContainer.appendChild(card);
+            });
+        }
+
+        window.removeFile = function(index) { 
+            selectedFiles.splice(index, 1); 
+            if (selectedFileIndex >= selectedFiles.length) selectedFileIndex = -1;
+            updateUIState(); 
+        };
+        
+        // ================= 9. 共用工具函式 =================
+        const yieldThread = () => new Promise(resolve => setTimeout(resolve, 15));
+
+        function triggerDownload(blob, filename) {
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
+        }
+
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const fr = new FileReader();
+                fr.onload = () => resolve(fr.result);
+                fr.onerror = reject;
+                fr.readAsArrayBuffer(file);
+            });
+        }
+
+        function setButtonSuccess(msg) {
+            actionBtn.classList.remove('btn-primary', 'breathing');
+            actionBtn.classList.add('btn-success');
+            actionBtnText.innerText = msg || translations[currentLang].successBtn;
+            actionBtn.disabled = false;
+            progressText.innerText = "";
+            setTimeout(() => { resetApp(); }, 4000);
+        }
+
+        // ================= 10. 模式 1: PDF → 圖片 (增強版) =================
+        window.startConversion = async function() {
+            if (selectedFiles.length === 0) return;
+            const scale = parseFloat(document.getElementById('qualitySelect').value);
+            const mimeType = document.getElementById('formatSelect').value;
+            const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+            const customWidth = parseInt(document.getElementById('customWidthInput').value) || 0;
+            const pageRangeStr = document.getElementById('pageRangeInput').value.trim();
+            const individualDL = document.getElementById('individualDownload').checked;
+            const password = document.getElementById('pdfPasswordInput').value.trim() || undefined;
+            const useWatermark = document.getElementById('enableWatermark').checked;
+            const wmText = document.getElementById('wmText').value || 'CONFIDENTIAL';
+            const wmOpacity = parseFloat(document.getElementById('wmOpacity').value);
+            const wmColor = document.getElementById('wmColor').value;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+            document.querySelectorAll('#fileListContainer button').forEach(el => el.disabled = true);
+
+            try {
+                const zip = new JSZip();
+                const allImageBlobs = []; // 用於獨立下載
+                const allImageNames = [];
+
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    const baseFilename = fileObj.file.name.replace(/\.[^/.]+$/, "");
+                    
+                    progressText.innerText = `${translations[currentLang].sysRead} ${baseFilename.substring(0, 15)}...`;
+                    await yieldThread();
+                    
+                    const arrayBuffer = await readFileAsArrayBuffer(fileObj.file);
+
+                    let pdf;
+                    try {
+                        pdf = await pdfjsLib.getDocument({ data: arrayBuffer, password: password }).promise;
+                    } catch (e) {
+                        if (e.name === 'PasswordException') {
+                            throw new Error(currentLang === 'zh' ? '密碼錯誤或檔案需要密碼，請在密碼欄位輸入正確密碼。' : 'Password required or incorrect. Please enter the password.');
+                        }
+                        throw e;
+                    }
+
+                    const totalPages = pdf.numPages;
+                    const pagesToConvert = parsePageRange(pageRangeStr, totalPages);
+                    
+                    let folder = (selectedFiles.length > 1 && !individualDL) ? zip.folder(baseFilename) : zip;
+
+                    for (let pi = 0; pi < pagesToConvert.length; pi++) {
+                        const pageNum = pagesToConvert[pi];
+                        actionBtnText.innerText = `⟳ ${currentLang==='zh'?'檔案':'File'} ${f+1}/${selectedFiles.length}`;
+                        progressText.innerText = `${translations[currentLang].sysConvert} ${currentLang==='zh'?'第 ':''}${pageNum}/${totalPages}${currentLang==='zh'?' 頁':''}`;
+                        await yieldThread();
+                        
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 1 });
+                        let effectiveScale = scale;
+                        if (customWidth > 0) {
+                            effectiveScale = customWidth / viewport.width;
+                        }
+                        const finalViewport = page.getViewport({ scale: effectiveScale });
+                        
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.height = finalViewport.height; canvas.width = finalViewport.width;
+
+                        if (mimeType === 'image/jpeg') { ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+                        await page.render({ canvasContext: ctx, viewport: finalViewport }).promise;
+
+                        if (useWatermark && wmText) {
+                            ctx.globalAlpha = wmOpacity;
+                            ctx.fillStyle = wmColor;
+                            ctx.font = `bold ${Math.max(20, canvas.width * 0.05)}px -apple-system, sans-serif`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.save();
+                            ctx.translate(canvas.width / 2, canvas.height / 2);
+                            ctx.rotate(-25 * Math.PI / 180);
+                            ctx.fillText(wmText, 0, 0);
+                            ctx.restore();
+                            ctx.globalAlpha = 1;
+                        }
+                        
+                        const blob = await new Promise(res => canvas.toBlob(res, mimeType, mimeType === 'image/jpeg' ? 0.95 : undefined));
+                        const imgName = `${baseFilename}_page_${pageNum}.${ext}`;
+                        
+                        if (individualDL) {
+                            allImageBlobs.push(blob);
+                            allImageNames.push(imgName);
+                        } else {
+                            folder.file(imgName, blob);
+                        }
+                        canvas.width = 0; canvas.height = 0;
+                    }
+                }
+
+                if (individualDL && allImageBlobs.length > 0) {
+                    for (let i = 0; i < allImageBlobs.length; i++) {
+                        triggerDownload(allImageBlobs[i], allImageNames[i]);
+                        await new Promise(r => setTimeout(r, 250));
+                    }
+                    setButtonSuccess(translations[currentLang].successBtn);
+                    return;
+                }
+
+                actionBtnText.innerText = translations[currentLang].sysZip;
+                progressText.innerText = translations[currentLang].sysZipWait;
+                await yieldThread();
+                
+                finalZipBlob = await zip.generateAsync({ type: "blob" });
+                triggerDownload(finalZipBlob, selectedFiles.length === 1 ? `${selectedFiles[0].file.name.replace(/\.[^/.]+$/, "")}_converted.zip` : 'Batch_Converted.zip');
+                
+                setButtonSuccess(translations[currentLang].successBtn);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 11. 模式 2: 圖片 → PDF =================
+        window.startImageToPDF = async function() {
+            if (selectedFiles.length === 0) return;
+            const pageSize = document.getElementById('img2pdfPageSize').value;
+            const orientation = document.getElementById('img2pdfOrient').value;
+            const margin = parseInt(document.getElementById('img2pdfMargin').value) || 20;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const { PDFDocument, PageSizes } = PDFLib;
+                const doc = await PDFDocument.create();
+
+                const sizeMap = {
+                    a4: PageSizes.A4,
+                    letter: PageSizes.Letter,
+                    original: null
+                };
+                let pageDims = sizeMap[pageSize];
+                if (orientation === 'landscape' && pageDims) {
+                    pageDims = [pageDims[1], pageDims[0]];
+                }
+
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    progressText.innerText = `${translations[currentLang].sysRead} ${fileObj.file.name.substring(0, 15)}...`;
+                    await yieldThread();
+
+                    const imgBuf = await readFileAsArrayBuffer(fileObj.file);
+                    const ext = fileObj.file.name.split('.').pop().toLowerCase();
+                    let image;
+                    if (ext === 'png' || ext === 'webp') {
+                        image = await doc.embedPng(imgBuf);
+                    } else {
+                        image = await doc.embedJpg(imgBuf);
+                    }
+
+                    let pgW, pgH;
+                    if (pageDims) {
+                        pgW = pageDims[0]; pgH = pageDims[1];
+                    } else {
+                        pgW = image.width; pgH = image.height;
+                    }
+
+                    const page = doc.addPage([pgW, pgH]);
+                    const drawW = pgW - margin * 2;
+                    const drawH = pgH - margin * 2;
+                    const scale = Math.min(drawW / image.width, drawH / image.height);
+                    const imgW = image.width * scale;
+                    const imgH = image.height * scale;
+                    const x = (pgW - imgW) / 2;
+                    const y = (pgH - imgH) / 2;
+
+                    page.drawImage(image, { x, y, width: imgW, height: imgH });
+                    actionBtnText.innerText = `⟳ ${currentLang==='zh'?'圖片':'Image'} ${f+1}/${selectedFiles.length}`;
+                }
+
+                progressText.innerText = translations[currentLang].sysZipWait;
+                await yieldThread();
+                const pdfBytes = await doc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                triggerDownload(blob, 'Images_Converted.pdf');
+                setButtonSuccess(translations[currentLang].img2pdfSuccess);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 12. 模式 3: 合併 PDF =================
+        window.startMerge = async function() {
+            if (selectedFiles.length < 2) {
+                alert(currentLang === 'zh' ? '請選擇至少兩個 PDF 檔案！' : 'Please select at least 2 PDF files!');
+                return;
+            }
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const mergedDoc = await PDFDocument.create();
+
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    progressText.innerText = `${translations[currentLang].sysRead} ${fileObj.file.name.substring(0, 15)}...`;
+                    actionBtnText.innerText = `⟳ ${currentLang==='zh'?'合併':'Merging'} ${f+1}/${selectedFiles.length}`;
+                    await yieldThread();
+
+                    const buf = await readFileAsArrayBuffer(fileObj.file);
+                    const doc = await PDFDocument.load(buf);
+                    const copiedPages = await mergedDoc.copyPages(doc, doc.getPageIndices());
+                    copiedPages.forEach(p => mergedDoc.addPage(p));
+                }
+
+                progressText.innerText = translations[currentLang].sysZipWait;
+                await yieldThread();
+                const pdfBytes = await mergedDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                triggerDownload(blob, 'Merged.pdf');
+                setButtonSuccess(translations[currentLang].mergeSuccess);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 13. 模式 4: 分割 PDF =================
+        window.startSplit = async function() {
+            if (selectedFiles.length === 0) return;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const fileObj = selectedFiles[0];
+                const baseName = fileObj.file.name.replace(/\.[^/.]+$/, "");
+                progressText.innerText = `${translations[currentLang].sysRead} ${fileObj.file.name.substring(0, 15)}...`;
+                await yieldThread();
+
+                const buf = await readFileAsArrayBuffer(fileObj.file);
+                const srcDoc = await PDFDocument.load(buf);
+                const totalPages = srcDoc.getPageCount();
+
+                let ranges = [];
+                if (document.getElementById('splitByN').checked) {
+                    const n = parseInt(document.getElementById('splitNValue').value) || 1;
+                    for (let i = 0; i < totalPages; i += n) {
+                        const end = Math.min(i + n - 1, totalPages - 1);
+                        ranges.push([i, end]);
+                    }
+                } else {
+                    const rangeStr = document.getElementById('splitRanges').value.trim();
+                    if (!rangeStr) {
+                        for (let i = 0; i < totalPages; i++) ranges.push([i, i]);
+                    } else {
+                        const parts = rangeStr.split(',');
+                        for (const part of parts) {
+                            const trimmed = part.trim();
+                            if (trimmed.includes('-')) {
+                                const [s, e] = trimmed.split('-').map(Number);
+                                if (!isNaN(s) && !isNaN(e)) {
+                                    ranges.push([Math.max(1, s) - 1, Math.min(e, totalPages) - 1]);
+                                }
+                            } else {
+                                const n = Number(trimmed);
+                                if (!isNaN(n) && n >= 1 && n <= totalPages) {
+                                    ranges.push([n - 1, n - 1]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (ranges.length === 1) {
+                    const subDoc = await PDFDocument.create();
+                    const pages = await subDoc.copyPages(srcDoc, Array.from({length: ranges[0][1] - ranges[0][0] + 1}, (_, i) => ranges[0][0] + i));
+                    pages.forEach(p => subDoc.addPage(p));
+                    const pdfBytes = await subDoc.save();
+                    triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_split_1.pdf`);
+                } else {
+                    const zip = new JSZip();
+                    for (let r = 0; r < ranges.length; r++) {
+                        actionBtnText.innerText = `⟳ ${currentLang==='zh'?'分割':'Splitting'} ${r+1}/${ranges.length}`;
+                        progressText.innerText = `${currentLang==='zh'?'範圍':'Range'} ${ranges[r][0]+1}-${ranges[r][1]+1}`;
+                        await yieldThread();
+                        const subDoc = await PDFDocument.create();
+                        const pages = await subDoc.copyPages(srcDoc, Array.from({length: ranges[r][1] - ranges[r][0] + 1}, (_, i) => ranges[r][0] + i));
+                        pages.forEach(p => subDoc.addPage(p));
+                        const pdfBytes = await subDoc.save();
+                        zip.file(`${baseName}_split_${r+1}.pdf`, pdfBytes);
+                    }
+                    progressText.innerText = translations[currentLang].sysZipWait;
+                    await yieldThread();
+                    const zipBlob = await zip.generateAsync({ type: "blob" });
+                    triggerDownload(zipBlob, `${baseName}_split.zip`);
+                }
+
+                setButtonSuccess(translations[currentLang].splitSuccess);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 14. 模式 5: 擷取文字 =================
+        window.startExtractText = async function() {
+            if (selectedFiles.length === 0) return;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const pageRangeStr = document.getElementById('extractPageRange').value.trim();
+                const format = document.getElementById('extractFormat').value;
+                const allResults = [];
+
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    progressText.innerText = `${translations[currentLang].sysRead} ${fileObj.file.name.substring(0, 15)}...`;
+                    await yieldThread();
+
+                    const buf = await readFileAsArrayBuffer(fileObj.file);
+                    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                    const pagesToExtract = parsePageRange(pageRangeStr, pdf.numPages);
+                    let fileText = '';
+
+                    for (let pi = 0; pi < pagesToExtract.length; pi++) {
+                        const pageNum = pagesToExtract[pi];
+                        actionBtnText.innerText = `⟳ ${currentLang==='zh'?'擷取':'Extracting'} ${f+1}/${selectedFiles.length}`;
+                        progressText.innerText = `${currentLang==='zh'?'第 ':''}${pageNum}/${pdf.numPages}${currentLang==='zh'?' 頁':''}`;
+                        await yieldThread();
+
+                        const page = await pdf.getPage(pageNum);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(' ');
+                        fileText += `\n--- Page ${pageNum} ---\n${pageText}\n`;
+                    }
+
+                    if (format === 'json') {
+                        allResults.push({ file: fileObj.file.name, text: fileText.trim() });
+                    } else {
+                        allResults.push(`=== ${fileObj.file.name} ===\n${fileText.trim()}\n`);
+                    }
+                }
+
+                const output = format === 'json' 
+                    ? JSON.stringify(allResults, null, 2) 
+                    : allResults.join('\n\n');
+                const ext = format === 'json' ? 'json' : 'txt';
+                const mime = format === 'json' ? 'application/json' : 'text/plain';
+                const blob = new Blob([output], { type: mime });
+                triggerDownload(blob, `extracted_text.${ext}`);
+                setButtonSuccess(translations[currentLang].extractSuccess);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 15. 模式 6: 旋轉 PDF =================
+        window.startRotate = async function() {
+            if (selectedFiles.length === 0) return;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const angle = parseInt(document.getElementById('rotateAngle').value);
+                const pageRangeStr = document.getElementById('rotatePageRange').value.trim();
+
+                const zip = new JSZip();
+
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    const baseName = fileObj.file.name.replace(/\.[^/.]+$/, "");
+                    progressText.innerText = `${translations[currentLang].sysRead} ${fileObj.file.name.substring(0, 15)}...`;
+                    await yieldThread();
+
+                    const buf = await readFileAsArrayBuffer(fileObj.file);
+                    const doc = await PDFDocument.load(buf);
+                    const totalPages = doc.getPageCount();
+                    const pagesToRotate = parsePageRange(pageRangeStr, totalPages);
+
+                    for (const pageNum of pagesToRotate) {
+                        actionBtnText.innerText = `⟳ ${currentLang==='zh'?'旋轉':'Rotating'} ${f+1}/${selectedFiles.length}`;
+                        progressText.innerText = `${currentLang==='zh'?'第 ':''}${pageNum}/${totalPages}${currentLang==='zh'?' 頁':''}`;
+                        await yieldThread();
+                        const page = doc.getPage(pageNum - 1);
+                        const currentRotation = page.getRotation().angle;
+                        page.setRotation({ angle: currentRotation + angle });
+                    }
+
+                    const pdfBytes = await doc.save();
+                    if (selectedFiles.length > 1) {
+                        zip.file(`${baseName}_rotated.pdf`, pdfBytes);
+                    } else {
+                        triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_rotated.pdf`);
+                    }
+                }
+
+                if (selectedFiles.length > 1) {
+                    progressText.innerText = translations[currentLang].sysZipWait;
+                    await yieldThread();
+                    const zipBlob = await zip.generateAsync({ type: "blob" });
+                    triggerDownload(zipBlob, 'Rotated_PDFs.zip');
+                }
+
+                setButtonSuccess(translations[currentLang].rotateSuccess);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 16. 模式 7: PDF 資訊 =================
+        window.showPDFInfo = async function() {
+            if (selectedFiles.length === 0) return;
+
+            const resultDiv = document.getElementById('pdfInfoResult');
+            const thumbnailsDiv = document.getElementById('pdfThumbnails');
+            resultDiv.innerHTML = '';
+            thumbnailsDiv.innerHTML = '';
+
+            try {
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    const buf = await readFileAsArrayBuffer(fileObj.file);
+                    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                    const metadata = await pdf.getMetadata();
+                    const info = metadata.info || {};
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 1 });
+
+                    const sizeMB = (fileObj.file.size / (1024 * 1024)).toFixed(2);
+                    const isEncrypted = info.IsLinearized !== undefined ? (info.Creator === 'encrypted' ? true : false) : false;
+
+                    const card = document.createElement('div');
+                    card.className = 'glass-panel bg-gray-50 dark:bg-darkborder border border-gray-200 dark:border-gray-700 p-4 rounded-xl';
+                    card.innerHTML = `
+                        <p class="font-bold text-blue-600 dark:text-blue-400 mb-2">${fileObj.file.name}</p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <span class="text-gray-500">${currentLang==='zh'?'檔案大小':'Size'}:</span><span>${sizeMB} MB</span>
+                            <span class="text-gray-500">${currentLang==='zh'?'總頁數':'Pages'}:</span><span>${pdf.numPages}</span>
+                            <span class="text-gray-500">${currentLang==='zh'?'頁面闊度':'Width'}:</span><span>${Math.round(viewport.width)} px</span>
+                            <span class="text-gray-500">${currentLang==='zh'?'頁面高度':'Height'}:</span><span>${Math.round(viewport.height)} px</span>
+                            <span class="text-gray-500">${currentLang==='zh'?'PDF 版本':'Version'}:</span><span>${info.PDFFormatVersion || '?'}</span>
+                            ${info.Title ? `<span class="text-gray-500">${currentLang==='zh'?'標題':'Title'}:</span><span>${info.Title}</span>` : ''}
+                            ${info.Author ? `<span class="text-gray-500">${currentLang==='zh'?'作者':'Author'}:</span><span>${info.Author}</span>` : ''}
+                            ${info.Subject ? `<span class="text-gray-500">${currentLang==='zh'?'主題':'Subject'}:</span><span>${info.Subject}</span>` : ''}
+                            ${info.CreationDate ? `<span class="text-gray-500">${currentLang==='zh'?'建立日期':'Created'}:</span><span>${new Date(info.CreationDate).toLocaleString()}</span>` : ''}
+                            ${info.ModDate ? `<span class="text-gray-500">${currentLang==='zh'?'修改日期':'Modified'}:</span><span>${new Date(info.ModDate).toLocaleString()}</span>` : ''}
+                            ${info.Creator ? `<span class="text-gray-500">${currentLang==='zh'?'產生器':'Creator'}:</span><span>${info.Creator}</span>` : ''}
+                            ${info.Producer ? `<span class="text-gray-500">${currentLang==='zh'?'製作工具':'Producer'}:</span><span>${info.Producer}</span>` : ''}
+                        </div>
+                    `;
+                    resultDiv.appendChild(card);
+
+                    // 渲染第一頁縮圖
+                    const thumbCanvas = document.createElement('canvas');
+                    const thumbScale = 0.3;
+                    const thumbViewport = page.getViewport({ scale: thumbScale });
+                    thumbCanvas.width = thumbViewport.width;
+                    thumbCanvas.height = thumbViewport.height;
+                    thumbCanvas.className = 'rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm';
+                    const thumbCtx = thumbCanvas.getContext('2d');
+                    await page.render({ canvasContext: thumbCtx, viewport: thumbViewport }).promise;
+                    thumbnailsDiv.appendChild(thumbCanvas);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-red-500 text-sm">${error.message || translations[currentLang].sysErr}</p>`;
+            }
+        };
+
+        // ================= 17. 模式 8: 壓縮 PDF =================
+        window.startCompress = async function() {
+            if (selectedFiles.length === 0) return;
+
+            actionBtn.disabled = true;
+            actionBtn.classList.add('breathing');
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const level = document.getElementById('compressLevel').value;
+                const compressResult = document.getElementById('compressResult');
+                let totalOriginal = 0, totalCompressed = 0;
+                const zip = new JSZip();
+
+                for (let f = 0; f < selectedFiles.length; f++) {
+                    const fileObj = selectedFiles[f];
+                    const baseName = fileObj.file.name.replace(/\.[^/.]+$/, "");
+                    totalOriginal += fileObj.file.size;
+                    progressText.innerText = `${currentLang==='zh'?'處理中':'Processing'}: ${fileObj.file.name.substring(0, 15)}...`;
+                    actionBtnText.innerText = `⟳ ${currentLang==='zh'?'壓縮':'Compress'} ${f+1}/${selectedFiles.length}`;
+                    await yieldThread();
+
+                    const buf = await readFileAsArrayBuffer(fileObj.file);
+
+                    if (level === 'light') {
+                        const doc = await PDFDocument.load(buf);
+                        doc.setTitle('');
+                        doc.setAuthor('');
+                        doc.setSubject('');
+                        doc.setKeywords([]);
+                        doc.setProducer('');
+                        doc.setCreator('');
+                        const pdfBytes = await doc.save({ useObjectStreams: true });
+                        totalCompressed += pdfBytes.byteLength;
+                        if (selectedFiles.length > 1) {
+                            zip.file(`${baseName}_compressed.pdf`, pdfBytes);
+                        } else {
+                            triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_compressed.pdf`);
+                        }
+                    } else {
+                        const compressQuality = level === 'aggressive' ? 0.5 : 0.8;
+                        const compressScale = level === 'aggressive' ? (150 / 72) : 1.5; // ~150 DPI for aggressive, ~216 DPI for medium
+                        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                        const newDoc = await PDFDocument.create();
+
+                        for (let p = 1; p <= pdf.numPages; p++) {
+                            progressText.innerText = `${currentLang==='zh'?'重新渲染頁面':'Re-rendering page'} ${p}/${pdf.numPages}...`;
+                            await yieldThread();
+
+                            const page = await pdf.getPage(p);
+                            const origViewport = page.getViewport({ scale: 1 });
+                            const scale = compressScale;
+                            const viewport = page.getViewport({ scale });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = "#FFFFFF";
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            await page.render({ canvasContext: ctx, viewport }).promise;
+                            const jpgBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', compressQuality));
+                            const jpgBuf = await new Response(jpgBlob).arrayBuffer();
+                            const image = await newDoc.embedJpg(jpgBuf);
+                            const newPage = newDoc.addPage([origViewport.width, origViewport.height]);
+                            newPage.drawImage(image, { x: 0, y: 0, width: origViewport.width, height: origViewport.height });
+                            canvas.width = 0; canvas.height = 0;
+                        }
+
+                        const pdfBytes = await newDoc.save({ useObjectStreams: true });
+                        totalCompressed += pdfBytes.byteLength;
+                        if (selectedFiles.length > 1) {
+                            zip.file(`${baseName}_compressed.pdf`, pdfBytes);
+                        } else {
+                            triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${baseName}_compressed.pdf`);
+                        }
+                    }
+                }
+
+                if (selectedFiles.length > 1) {
+                    progressText.innerText = translations[currentLang].sysZipWait;
+                    await yieldThread();
+                    const zipBlob = await zip.generateAsync({ type: "blob" });
+                    triggerDownload(zipBlob, 'Compressed_PDFs.zip');
+                }
+
+                const reduction = totalOriginal > 0 ? ((1 - totalCompressed / totalOriginal) * 100).toFixed(1) : 0;
+                compressResult.classList.remove('hidden');
+                compressResult.innerHTML = `
+                    <span class="text-green-600 dark:text-green-400 font-bold">
+                        ${currentLang==='zh'?'壓縮前':'Before'}: ${(totalOriginal/(1024*1024)).toFixed(2)} MB → 
+                        ${currentLang==='zh'?'壓縮後':'After'}: ${(totalCompressed/(1024*1024)).toFixed(2)} MB 
+                        (${currentLang==='zh'?'減少':'Reduced'} ${reduction}%)
+                    </span>
+                `;
+                setButtonSuccess(translations[currentLang].compressSuccess);
+
+            } catch (error) {
+                console.error(error);
+                actionBtn.classList.remove('breathing');
+                actionBtnText.innerText = '❌ Error';
+                progressText.innerText = error.message || translations[currentLang].sysErr;
+                actionBtn.disabled = false;
+                setTimeout(() => { resetApp(); }, 4000);
+            }
+        };
+
+        // ================= 18. 重置工具 =================
+        window.resetApp = function() {
+            selectedFiles = []; finalZipBlob = null;
+            selectedFileIndex = -1;
+            actionBtn.disabled = false; 
+            actionBtn.classList.remove('btn-success', 'breathing');
+            actionBtn.classList.add('btn-primary');
+            actionBtnText.innerText = translations[currentLang].btnStart;
+            progressText.innerText = "";
+            const compressResult = document.getElementById('compressResult');
+            if (compressResult) compressResult.classList.add('hidden');
+            document.getElementById('pdfInfoResult').innerHTML = '';
+            document.getElementById('pdfThumbnails').innerHTML = '';
+            updateUIState();
+        };
+        
+        // ================= 19. PWA 安裝邏輯 =================
+        let deferredPrompt;
+        const installBtn = document.getElementById('installAppBtn');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+            installBtn.classList.add('flex');
+        });
+        
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') installBtn.classList.add('hidden');
+                deferredPrompt = null;
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
+</body>
+</html>
