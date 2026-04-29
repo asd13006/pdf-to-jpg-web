@@ -20,28 +20,36 @@ if errorlevel 1 (
 
 REM --- commit message ---
 if "%~1"=="" (
-    set "MSG=v2.0.0 update: %DATE% %TIME%"
+    set "MSG=v2.0.0 update %DATE% %TIME%"
 ) else (
     set "MSG=%~1"
 )
 
-REM --- step 1: stage ---
-echo [1/3] Staging files...
+REM --- step 1: pull latest ---
+echo [1/4] Pulling latest from GitHub...
+git pull origin main --rebase 2>nul
+
+REM --- step 2: stage ---
+echo [2/4] Staging files...
 git add -A
 
-REM --- step 2: commit ---
-echo [2/3] Committing...
-git commit -m "%MSG%"
+REM --- step 3: commit ---
+echo [3/4] Committing...
+git commit -m "%MSG%" 2>nul
+if errorlevel 1 (
+    echo No changes to commit.
+)
 
-REM --- step 3: push ---
+REM --- step 4: push ---
 echo.
-echo [3/3] Pushing to GitHub...
-git push -u origin main
+echo [4/4] Pushing to GitHub...
+git push origin main
 
 if errorlevel 1 (
     echo.
-    echo [FAIL] Push failed. Check your GitHub login.
-    echo Try: git remote set-url origin https://TOKEN@github.com/asd13006/pdf-to-jpg-web.git
+    echo [FAIL] Push failed. Check:
+    echo   1. GitHub login: run "git push" manually once
+    echo   2. Or use token: git remote set-url origin https://TOKEN@github.com/asd13006/pdf-to-jpg-web.git
 ) else (
     echo.
     echo ========================================
