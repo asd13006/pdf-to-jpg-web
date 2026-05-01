@@ -959,6 +959,7 @@
         function renderFileList() {
             fileListContainer.innerHTML = '';
             const isMerge = currentMode === 'merge';
+            const isImgMode = currentMode === 'img2pdf';
             selectedFiles.forEach((item, index) => {
                 const sizeMB = (item.file.size / (1024 * 1024)).toFixed(1);
                 const card = document.createElement('div');
@@ -972,7 +973,7 @@
                 };
                 card.innerHTML = `
                     <div class="flex items-center gap-4 overflow-hidden">
-                        <div class="text-2xl bg-gray-200 dark:bg-gray-800 p-2 rounded-lg leading-none">${currentMode === 'img2pdf' ? '🖼️' : '📄'}</div>
+                        <div class="file-thumb-placeholder shrink-0 w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-lg flex items-center justify-center text-xl" data-file-id="${item.id}">${isImgMode ? '🖼️' : '📄'}</div>
                         <div class="truncate">
                             <p class="font-bold truncate text-sm" title="${item.file.name}">${item.file.name}</p>
                             <p class="text-xs text-gray-500">${sizeMB} MB</p>
@@ -982,6 +983,39 @@
                 `;
                 fileListContainer.appendChild(card);
             });
+            if (!isImgMode) loadFileThumbnails();
+        }
+
+        async function loadFileThumbnails() {
+            const snapshot = [...selectedFiles];
+            for (let i = 0; i < snapshot.length; i++) {
+                const item = snapshot[i];
+                if (!selectedFiles.some(f => f.id === item.id)) continue;
+                const placeholder = document.querySelector(`.file-thumb-placeholder[data-file-id="${item.id}"]`);
+                if (!placeholder) continue;
+                try {
+                    const buf = await readFileAsArrayBuffer(item.file);
+                    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                    const page = await pdf.getPage(1);
+                    const scale = 0.3;
+                    const viewport = page.getViewport({ scale });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    const ctx = canvas.getContext('2d');
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    if (!selectedFiles.some(f => f.id === item.id)) continue;
+                    const img = document.createElement('img');
+                    img.src = canvas.toDataURL('image/jpeg', 0.8);
+                    img.className = 'w-full h-full object-cover rounded';
+                    placeholder.innerHTML = '';
+                    placeholder.className = 'file-thumb-placeholder shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-800';
+                    placeholder.appendChild(img);
+                } catch (e) {
+                    // keep placeholder icon on error
+                }
+                await yieldThread();
+            }
         }
 
         window.removeFile = function(index) { 
