@@ -1868,9 +1868,9 @@
                 const btnGroup = document.createElement('div');
                 btnGroup.className = 'flex justify-center gap-1';
                 btnGroup.innerHTML = `
-                    <button onclick="moveReorderPage(${i}, -1)" class="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded hover:bg-blue-100 transition">▲</button>
-                    <button onclick="moveReorderPage(${i}, 1)" class="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded hover:bg-blue-100 transition">▼</button>
-                    <button onclick="deleteReorderPage(${i})" class="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition">✕</button>
+                    <button onclick="moveReorderPageBtn(this, -1)" class="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded hover:bg-blue-100 transition">▲</button>
+                    <button onclick="moveReorderPageBtn(this, 1)" class="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded hover:bg-blue-100 transition">▼</button>
+                    <button onclick="deleteReorderPageBtn(this)" class="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition">✕</button>
                 `;
 
                 card.appendChild(label);
@@ -1914,11 +1914,24 @@
             e.preventDefault();
             this.classList.remove('ring-2', 'ring-blue-400', 'scale-[1.02]');
             const targetIdx = parseInt(this.dataset.reorderIndex);
-            if (targetIdx !== reorderDragSrc && reorderDragSrc >= 0) {
-                const [moved] = reorderPages.splice(reorderDragSrc, 1);
-                reorderPages.splice(targetIdx, 0, moved);
-                renderReorderThumbnails(reorderPdfObj, reorderBufObj);
+            if (targetIdx === reorderDragSrc || reorderDragSrc < 0) return;
+
+            const container = document.getElementById('reorderThumbnails');
+            const cards = [...container.querySelectorAll('[data-reorder-index]')];
+            const dragged = cards.find(c => parseInt(c.dataset.reorderIndex) === reorderDragSrc);
+            const target = cards.find(c => parseInt(c.dataset.reorderIndex) === targetIdx);
+            if (!dragged || !target) return;
+
+            if (reorderDragSrc < targetIdx) {
+                container.insertBefore(dragged, target.nextSibling);
+            } else {
+                container.insertBefore(dragged, target);
             }
+
+            const [moved] = reorderPages.splice(reorderDragSrc, 1);
+            reorderPages.splice(targetIdx, 0, moved);
+            refreshReorderIndices(container);
+            reorderDragSrc = -1;
         }
 
         function reorderDragEnd(e) {
@@ -1927,20 +1940,48 @@
             reorderDragSrc = -1;
         }
 
-        window.moveReorderPage = function(idx, dir) {
+        function refreshReorderIndices(container) {
+            const cards = container.querySelectorAll('[data-reorder-index]');
+            cards.forEach((card, i) => { card.dataset.reorderIndex = i; });
+        }
+
+        function getReorderIndex(btn) {
+            const card = btn.closest('[data-reorder-index]');
+            return parseInt(card ? card.dataset.reorderIndex : '0');
+        }
+
+        window.moveReorderPageBtn = function(btn, dir) {
+            const idx = getReorderIndex(btn);
             const newIdx = idx + dir;
             if (newIdx < 0 || newIdx >= reorderPages.length) return;
+
+            const container = document.getElementById('reorderThumbnails');
+            const cards = [...container.querySelectorAll('[data-reorder-index]')];
+            const card = cards.find(c => parseInt(c.dataset.reorderIndex) === idx);
+            const other = cards.find(c => parseInt(c.dataset.reorderIndex) === newIdx);
+            if (!card || !other) return;
+
+            if (dir < 0) {
+                container.insertBefore(card, other);
+            } else {
+                container.insertBefore(card, other.nextSibling);
+            }
+
             [reorderPages[idx], reorderPages[newIdx]] = [reorderPages[newIdx], reorderPages[idx]];
-            renderReorderThumbnails(reorderPdfObj, reorderBufObj);
+            refreshReorderIndices(container);
         };
 
-        window.deleteReorderPage = function(idx) {
+        window.deleteReorderPageBtn = function(btn) {
             if (reorderPages.length <= 1) {
                 alert(currentLang === 'zh' ? '至少保留一頁！' : 'At least one page must remain!');
                 return;
             }
+            const idx = getReorderIndex(btn);
+            const container = document.getElementById('reorderThumbnails');
+            const card = btn.closest('[data-reorder-index]');
+            if (card) card.remove();
             reorderPages.splice(idx, 1);
-            renderReorderThumbnails(reorderPdfObj, reorderBufObj);
+            refreshReorderIndices(container);
         };
 
         window.saveReorder = async function() {
