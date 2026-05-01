@@ -838,6 +838,8 @@
 
         // ================= 7. 頁面排序狀態 =================
         let reorderPages = [];
+        let reorderPdfObj = null;
+        let reorderBufObj = null;
         window.resetReorder = function() {
             if (reorderPages.length > 0) {
                 reorderPages = Array.from({length: reorderPages.length}, (_, i) => i);
@@ -1807,6 +1809,8 @@
                 const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
                 const totalPages = pdf.numPages;
                 reorderPages = Array.from({length: totalPages}, (_, i) => i);
+                reorderPdfObj = pdf;
+                reorderBufObj = buf;
                 renderReorderThumbnails(pdf, buf);
             } catch (error) {
                 progressText.innerText = error.message || translations[currentLang].sysErr;
@@ -1818,10 +1822,12 @@
             container.innerHTML = '<p class="text-sm text-gray-500 text-center col-span-full py-4">' + (currentLang === 'zh' ? '載入頁面縮圖中...' : 'Loading thumbnails...') + '</p>';
             await yieldThread();
 
-            const pdf = pdfObj || await (async () => {
-                const b = bufOverride || await readFileAsArrayBuffer(selectedFiles[0].file);
+            const pdf = pdfObj || reorderPdfObj || await (async () => {
+                const b = bufOverride || reorderBufObj || await readFileAsArrayBuffer(selectedFiles[0].file);
                 return await pdfjsLib.getDocument({ data: b }).promise;
             })();
+            if (pdfObj) { reorderPdfObj = pdfObj; }
+            if (bufOverride) { reorderBufObj = bufOverride; }
 
             container.innerHTML = '';
             const maxDisplay = Math.min(reorderPages.length, 50);
@@ -1837,17 +1843,26 @@
 
                 const img = document.createElement('img');
                 img.src = canvas.toDataURL('image/jpeg', 0.7);
-                img.className = 'rounded shadow-sm mx-auto';
+                img.className = 'rounded shadow-sm mx-auto pointer-events-none';
+                img.draggable = false;
                 img.alt = `${currentLang==='zh'?'第':'P'} ${pageIdx + 1}`;
 
                 const card = document.createElement('div');
-                card.className = 'glass-panel bg-gray-50 dark:bg-darkborder border border-gray-200 dark:border-gray-700 p-2 rounded-xl text-center';
+                card.className = 'glass-panel bg-gray-50 dark:bg-darkborder border border-gray-200 dark:border-gray-700 p-2 rounded-xl text-center cursor-grab active:cursor-grabbing transition-all duration-200';
+                card.draggable = true;
+                card.dataset.reorderIndex = i;
+                card.addEventListener('dragstart', reorderDragStart);
+                card.addEventListener('dragover', reorderDragOver);
+                card.addEventListener('dragleave', reorderDragLeave);
+                card.addEventListener('drop', reorderDrop);
+                card.addEventListener('dragend', reorderDragEnd);
+
                 const label = document.createElement('div');
-                label.className = 'text-xs font-bold text-gray-500 mb-1';
+                label.className = 'text-xs font-bold text-gray-500 mb-1 pointer-events-none';
                 label.innerText = `${currentLang==='zh'?'第':'P'} ${pageIdx + 1}${currentLang==='zh'?' 頁':''}`;
 
                 const thumbWrap = document.createElement('div');
-                thumbWrap.className = 'mb-2 flex justify-center';
+                thumbWrap.className = 'mb-2 flex justify-center pointer-events-none';
                 thumbWrap.appendChild(img);
 
                 const btnGroup = document.createElement('div');
@@ -1872,11 +1887,51 @@
             actionBtn.disabled = false;
         }
 
+        // Drag-and-drop handlers for reorder thumbnails
+        let reorderDragSrc = -1;
+
+        function reorderDragStart(e) {
+            reorderDragSrc = parseInt(this.dataset.reorderIndex);
+            this.style.opacity = '0.4';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', '');
+        }
+
+        function reorderDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const idx = parseInt(this.dataset.reorderIndex);
+            if (idx !== reorderDragSrc) {
+                this.classList.add('ring-2', 'ring-blue-400', 'scale-[1.02]');
+            }
+        }
+
+        function reorderDragLeave(e) {
+            this.classList.remove('ring-2', 'ring-blue-400', 'scale-[1.02]');
+        }
+
+        function reorderDrop(e) {
+            e.preventDefault();
+            this.classList.remove('ring-2', 'ring-blue-400', 'scale-[1.02]');
+            const targetIdx = parseInt(this.dataset.reorderIndex);
+            if (targetIdx !== reorderDragSrc && reorderDragSrc >= 0) {
+                const [moved] = reorderPages.splice(reorderDragSrc, 1);
+                reorderPages.splice(targetIdx, 0, moved);
+                renderReorderThumbnails(reorderPdfObj, reorderBufObj);
+            }
+        }
+
+        function reorderDragEnd(e) {
+            this.style.opacity = '';
+            this.classList.remove('ring-2', 'ring-blue-400', 'scale-[1.02]');
+            reorderDragSrc = -1;
+        }
+
         window.moveReorderPage = function(idx, dir) {
             const newIdx = idx + dir;
             if (newIdx < 0 || newIdx >= reorderPages.length) return;
             [reorderPages[idx], reorderPages[newIdx]] = [reorderPages[newIdx], reorderPages[idx]];
-            renderReorderThumbnails();
+            renderReorderThumbnails(reorderPdfObj, reorderBufObj);
         };
 
         window.deleteReorderPage = function(idx) {
@@ -1885,7 +1940,7 @@
                 return;
             }
             reorderPages.splice(idx, 1);
-            renderReorderThumbnails();
+            renderReorderThumbnails(reorderPdfObj, reorderBufObj);
         };
 
         window.saveReorder = async function() {
@@ -1999,6 +2054,8 @@
             selectedFiles = []; finalZipBlob = null;
             selectedFileIndex = -1;
             reorderPages = [];
+            reorderPdfObj = null;
+            reorderBufObj = null;
             actionBtn.disabled = false; 
             actionBtn.classList.remove('btn-success', 'breathing');
             actionBtn.classList.add('btn-primary');
