@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Recurse -File)",
+      "Bash(Select-Object FullName, Length)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\leolai\\\\Desktop\\\\Pdf to jpg\\\\online ver\\\\dist\\\\index.html\")",
+      "Bash(Select-Object -Last 8)",
+      "Bash(npx serve *)",
+      "Bash(node *)"
+    ]
+  }
+}
