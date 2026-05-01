@@ -9,7 +9,10 @@
       "Bash(Get-Content \"C:\\\\Users\\\\leolai\\\\Desktop\\\\Pdf to jpg\\\\online ver\\\\dist\\\\index.html\")",
       "Bash(Select-Object -Last 8)",
       "Bash(npx serve *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(grep -o '.{0,200}const _0x')",
+      "Bash(awk 'NR>=503 && NR<=510' \"C:\\\\Users\\\\leolai\\\\Desktop\\\\Pdf to jpg\\\\online ver\\\\dist\\\\index.html\")",
+      "Bash(curl -s http://localhost:3456)"
     ]
   }
 }

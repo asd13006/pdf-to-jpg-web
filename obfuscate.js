@@ -8,57 +8,61 @@ const distPath = path.join(distDir, 'index.html');
 
 const html = fs.readFileSync(srcPath, 'utf8');
 
-// Match all inline <script> blocks (without src attribute)
-const scriptRegex = /<script\s*>(.*?)<\/script>/gs;
-const matches = [...html.matchAll(scriptRegex)];
+// ── Step 1: Extract & minify <style> blocks (save placeholders) ──
+const styleBlocks = [];
+const htmlNoStyle = html.replace(/<style>(.*?)<\/style>/gs, (match, content) => {
+    // Minify CSS
+    let css = content
+        .replace(/\/\*[\s\S]*?\*\//g, '')     // remove comments
+        .replace(/\s+/g, ' ')                  // collapse whitespace
+        .replace(/\s*([{}:;,])\s*/g, '$1')     // remove whitespace around {}:;,
+        .replace(/;}/g, '}')                   // remove trailing ; before }
+        .trim();
+    styleBlocks.push(css);
+    return `__STYLE_${styleBlocks.length - 1}__`;
+});
 
-if (matches.length < 2) {
-    console.error('Error: Expected at least 2 inline <script> blocks, found', matches.length);
+// ── Step 2: Extract & handle inline <script> blocks ──
+const scriptRegex = /<script>(.*?)<\/script>/gs;
+const scriptMatches = [...htmlNoStyle.matchAll(scriptRegex)];
+
+if (scriptMatches.length < 2) {
+    console.error('Error: Expected at least 2 inline <script> blocks, found', scriptMatches.length);
     process.exit(1);
 }
 
-// Find the longest script block (the main app code)
-let mainMatch = matches[0];
-for (const m of matches) {
-    if (m[1].length > mainMatch[1].length) {
-        mainMatch = m;
-    }
+// Find the longest script block (main app code)
+let mainMatch = scriptMatches[0];
+for (const m of scriptMatches) {
+    if (m[1].length > mainMatch[1].length) mainMatch = m;
 }
 
 const mainScriptContent = mainMatch[1];
 const mainScriptFull = mainMatch[0];
-
 console.log(`Main script block: ${mainScriptContent.length} chars`);
 
-// Names that MUST survive obfuscation — they are referenced from HTML
-// onclick/onchange handlers or are CDN library globals
+// ── Step 3: Obfuscate JS ──
 const reservedNames = [
     // window.* functions called from HTML onclick/onchange
     'openFeatureGrid', 'closeFeatureGrid',
     'toggleTheme', 'changeLanguage',
     'openCloudModal', 'openModal',
-    'clearSignature',
-    'moveFileItem',
-    'toggleSplitMode',
-    'saveMetadata',
-    'resetReorder',
-    'startConversion',
-    'removeFile',
+    'clearSignature', 'moveFileItem',
+    'toggleSplitMode', 'saveMetadata', 'resetReorder',
+    'startConversion', 'removeFile',
     'moveReorderPageBtn', 'deleteReorderPageBtn',
     'toggleWatermarkSettings', 'togglePageNumberSettings', 'toggleSignatureSettings',
-    'handleFilesSelected',
-    'selectMode',
-    'resetApp',
+    'handleFilesSelected', 'selectMode', 'resetApp',
     // action functions registered in FEATURE_MODES
     'startImageToPDF', 'startMerge', 'startSplit', 'startExtractText',
     'startRotate', 'showPDFInfo', 'startCompress', 'startEncrypt',
     'startReorder', 'startPDF2Word', 'saveReorder',
-    // CDN libraries attached to window
+    // CDN libraries
     'pdfjsLib', 'JSZip', 'PDFLib', 'docx',
-    // Core globals accessed across the app
+    // Core globals
     'FEATURE_MODES', 'currentMode', 'selectedFiles', 'finalZipBlob',
     'translations', 'currentLang', 'isProcessing', 'modalContents',
-    // Event handler function expressions assigned dynamically
+    // Internal function names
     'initSignaturePad', 'getSigPos', 'parsePageRange',
     'getValidExtensions', 'handleNewFiles', 'getAcceptForMode',
     'updateUIState', 'renderFileList', 'loadFileThumbnails',
@@ -67,76 +71,87 @@ const reservedNames = [
     'reorderDragStart', 'reorderDragOver', 'reorderDragLeave',
     'reorderDrop', 'reorderDragEnd',
     'refreshReorderIndices', 'getReorderIndex',
-    // yield helper
     'yieldThread',
 ];
 
 const obfuscationResult = JavaScriptObfuscator.obfuscate(mainScriptContent, {
-    // Make strings unreadable by extracting into a rotating base64-encoded array
     stringArray: true,
     stringArrayEncoding: ['base64'],
-    stringArrayThreshold: 0.5,
+    stringArrayThreshold: 0.3,
 
-    // Control flow flattening — makes logic very hard to follow
     controlFlowFlattening: true,
-    controlFlowFlatteningThreshold: 0.5,
+    controlFlowFlatteningThreshold: 0.75,
 
-    // Inject dead code to confuse readers
     deadCodeInjection: true,
-    deadCodeInjectionThreshold: 0.3,
+    deadCodeInjectionThreshold: 0.4,
 
-    // Anti-beautifier: breaks code if someone tries to format it
-    selfDefending: false,
-
-    // Compact output (single line)
     compact: true,
-
-    // Simplify expressions
     simplify: true,
 
-    // MUST preserve global variable names (window scope)
+    // Preserve globals & properties
     renameGlobals: false,
-
-    // MUST preserve object property names (FEATURE_MODES.settingsPanel etc.)
     renameProperties: false,
-
-    // MUST preserve these specific identifiers
     reservedNames: reservedNames,
 
-    // Disable debug protection (would interfere with dev tools)
+    // Use mangled names for shorter output
+    identifierNamesGenerator: 'mangled',
+
     debugProtection: false,
-
-    // Disable domain lock — the app can run anywhere
     domainLock: [],
-
-    // Disable unicode escaping (keeps output smaller)
     unicodeEscapeSequence: false,
-
-    // Don't split strings (performance)
     splitStrings: false,
 });
 
 const obfuscatedCode = obfuscationResult.getObfuscatedCode();
-console.log(`Obfuscated code: ${obfuscatedCode.length} chars (${Math.round(obfuscatedCode.length / mainScriptContent.length * 100)}% of original)`);
+console.log(`Obfuscated: ${obfuscatedCode.length} chars (${Math.round(obfuscatedCode.length / mainScriptContent.length * 100)}% of original)`);
 
-// Replace the main script block with obfuscated version
-const result = html.replace(mainScriptFull, `<script>\n${obfuscatedCode}\n</script>`);
+// ── Step 4: Replace main script with obfuscated version ──
+let result = htmlNoStyle.replace(mainScriptFull, `<script>${obfuscatedCode}</script>`);
 
-// Also minify the tailwind config script (tiny but still)
-const tailwindMatch = html.match(/<script>\s*tailwind\.config\s*=\s*\{[^}]*\}\s*<\/script>/);
-if (tailwindMatch) {
-    const minified = tailwindMatch[0].replace(/\s+/g, ' ').replace(/\s*\{\s*/g, '{').replace(/\s*\}\s*/g, '}').replace(/\s*:\s*/g, ':').replace(/\s*,\s*/g, ',');
-    // Not strictly necessary but harmless
-}
+// ── Step 5: Restore minified <style> blocks ──
+result = result.replace(/__STYLE_(\d+)__/g, (_, i) => `<style>${styleBlocks[parseInt(i)]}</style>`);
 
-// Write output
+// ── Step 6: Minify HTML ──
+// Remove HTML comments (but keep conditional comments)
+result = result.replace(/<!--(?!\[if\s)[\s\S]*?-->/g, '');
+
+// Collapse whitespace in HTML (outside of <script> and <style> tags)
+// Split by <script> and <style> tags, minify only the HTML parts
+const parts = [];
+let remaining = result;
+let idx = 0;
+
+// Find all script/style blocks and protect them
+const protectedBlocks = [];
+let tempHtml = result
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (m) => {
+        protectedBlocks.push(m);
+        return `__PROTECTED_${protectedBlocks.length - 1}__`;
+    })
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (m) => {
+        protectedBlocks.push(m);
+        return `__PROTECTED_${protectedBlocks.length - 1}__`;
+    });
+
+// Minify the HTML parts
+tempHtml = tempHtml
+    .replace(/\s+/g, ' ')                              // collapse all whitespace to single space
+    .replace(/>\s+</g, '><')                           // remove whitespace between tags
+    .replace(/\s+>/g, '>')                             // remove whitespace before >
+    .replace(/<\s+/g, '<')                             // remove whitespace after <
+    .trim();
+
+// Restore protected blocks
+tempHtml = tempHtml.replace(/__PROTECTED_(\d+)__/g, (_, i) => protectedBlocks[parseInt(i)]);
+
+// ── Step 7: Write output ──
 if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
 }
-fs.writeFileSync(distPath, result, 'utf8');
-console.log(`Wrote ${distPath} (${result.length} chars)`);
+fs.writeFileSync(distPath, tempHtml, 'utf8');
+console.log(`Wrote ${distPath} (${tempHtml.length} chars, ${tempHtml.split('\n').length} lines)`);
 
-// Also copy sw.js and manifest.json to dist
+// Copy supporting files
 for (const f of ['sw.js', 'manifest.json']) {
     const src = path.join(__dirname, f);
     if (fs.existsSync(src)) {
